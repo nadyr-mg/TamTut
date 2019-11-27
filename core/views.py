@@ -4,11 +4,13 @@ from .forms import UserRegistrationForm
 
 
 def home(request):
-    return render(request, 'core/home.html')
+    if request.user.is_anonymous:
+        return redirect('login')
+    else:
+        return render(request, 'core/home.html')
 
 
 def register(request):
-    form = UserRegistrationForm
     if request.method != 'POST':
         form = UserRegistrationForm()
     else:
