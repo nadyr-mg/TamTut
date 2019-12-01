@@ -3,17 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+    <style>
+        img {
+            border-radius: 8px;
+            height: 144px;
+        }
+    </style>
+
 </head>
 <body>
 <div>
     <a href="{% url 'home' %}">TamTut</a> -
-{% if user.is_anonymous %}
-    <a href="{% url 'register' %}">Register</a> -
-    <a href="{% url 'login' %}">Log In</a>
-{% else %}
-    {{user.username}} -
-    <a href="{% url 'logout' %}">Log Out</a>
-{% endif %}
+    {% if user.is_anonymous %}
+        <a href="{% url 'register' %}">Register</a> -
+        <a href="{% url 'login' %}">Log In</a>
+    {% else %}
+        <a href="{% url 'profile' %}">{{ user.username }}</a> -
+        <a href="{% url 'logout' %}">Log Out</a>
+    {% endif %}
 </div>
 <br>
 
