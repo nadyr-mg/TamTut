@@ -1,7 +1,6 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login
-from django.contrib.auth.models import User
-from .forms import UserRegistrationForm
+from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo
 
 
 def home(request):
@@ -32,9 +31,21 @@ def register(request):
 
 
 def profile(request):
-    # acc = User.objects.get(id=pk)
-    # form = acc.all
-    # form = UserRegistrationForm(request.GET)
-
-    # context = {acc:'acc', form:'form'}
     return render(request, 'core/profile.html')
+
+
+def edit_profile(request):
+    if request.method == 'POST':
+        u_form = EditUserInfo(request.POST, instance=request.user)
+        p_form = EditProfileInfo(request.POST,
+                                 request.FILES,
+                                 instance=request.user.profile)
+        if u_form.is_valid() and p_form.is_valid():
+            u_form.save()
+            p_form.save()
+            return redirect(reverse('profile'))
+    else:
+        u_form = EditUserInfo(instance=request.user)
+        p_form = EditProfileInfo(instance=request.user.profile)
+    context = {'u_form': u_form, 'p_form': p_form}
+    return render(request, 'core/edit_profile.html', context)

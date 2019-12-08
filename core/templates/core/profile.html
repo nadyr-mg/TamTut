@@ -1,16 +1,13 @@
 {% extends 'core/wrapper.html' %}
-{% load static %}
+
 {% block content %}
-<h2>Hi, {{ user.username }}</h2>
-    <img src="{{ user.profile.image.url }}" >
-{##}
-{#<form method="get">#}
-{#    {% csrf_token %}#}
-{#    {{ form }}#}
-</form>
-{#    {{ user.first_name }}#}
-{#    {{ user.last_name }}#}
-{#    {{ user.email }}#}
-{#    {{ user.password1 }}#}
+
+    <h2>Hi, {{ user.username }}</h2>
+    <img src="{{ user.profile.image.url }}">
+    <h2>Email: {{ user.email }}</h2>
+    <h2>First name: {{ user.first_name }}</h2>
+    <h2>Last name: {{ user.last_name }}</h2>
+
+    <h3><a href="{% url 'edit_profile' %}">Edit Profile</a></h3>
 
 {% endblock content %}
