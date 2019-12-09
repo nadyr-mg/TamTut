@@ -17,7 +17,7 @@ class UserRegistrationForm(UserCreationForm):
 class EditProfileInfo(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ('image', )
+        fields = ('image', 'hobby')
 
 
 class EditUserInfo(forms.ModelForm):

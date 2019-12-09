@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login
 from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo
+from core.models import Profile
 
 
 def home(request):
@@ -31,7 +32,9 @@ def register(request):
 
 
 def profile(request):
-    return render(request, 'core/profile.html')
+    prof = Profile.objects.get(id=request.user.profile.id)
+    hobbies = prof.hobby.all()
+    return render(request, 'core/profile.html', {'hobbies': hobbies})
 
 
 def edit_profile(request):

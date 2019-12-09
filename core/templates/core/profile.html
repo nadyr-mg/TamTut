@@ -1,13 +1,18 @@
 {% extends 'core/wrapper.html' %}
 
 {% block content %}
-
+<ul>
     <h2>Hi, {{ user.username }}</h2>
     <img src="{{ user.profile.image.url }}">
-    <h2>Email: {{ user.email }}</h2>
-    <h2>First name: {{ user.first_name }}</h2>
-    <h2>Last name: {{ user.last_name }}</h2>
-
+    <p>Email: {{ user.email }}</p>
+    <p>First name: {{ user.first_name }}</p>
+    <p>Last name: {{ user.last_name }}</p>
+<h5>Your hobbies:</h5>
+    {% for hobby in hobbies %}
+        <li>{{ hobby }}</li>
+        {% empty %}
+        <p>There are no hobbies yet!</p>
+    {% endfor %}
     <h3><a href="{% url 'edit_profile' %}">Edit Profile</a></h3>
-
+</ul>
 {% endblock content %}
