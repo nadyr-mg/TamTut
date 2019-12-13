@@ -58,19 +58,19 @@ def edit_profile(request):
 def hobby_page(request):
     profiles = []
     if request.method == 'POST':
-        p_form = HobbyList(request.POST)
-        if p_form.is_valid():
+        hobbies_form = HobbyList(request.POST)
+        if hobbies_form.is_valid():
             # return list of users with common hobbies
-            hobbies = p_form.cleaned_data['hobby']
+            hobbies = hobbies_form.cleaned_data['hobby']
             profiles = Profile.objects.all()
             for hobby in hobbies:
                 profiles = profiles.filter(hobby__hobby=hobby)
 
             profiles2 = Profile.objects.filter(hobby__in=hobbies).distinct()
 
-            context = {'p_form': p_form, 'profiles': profiles, 'profiles2': profiles2, }
+            context = {'hobbies_form': hobbies_form, 'profiles': profiles, 'profiles2': profiles2, }
             return render(request, 'core/hobby_page.html', context)
     else:
-        p_form = HobbyList()
-    context = {'p_form': p_form, 'profiles': profiles}
+        hobbies_form = HobbyList()
+    context = {'hobbies_form': hobbies_form, 'profiles': profiles}
     return render(request, 'core/hobby_page.html', context)
