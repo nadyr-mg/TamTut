@@ -1,0 +1,28 @@
+{% extends 'core/wrapper.html' %}
+
+{% block content %}
+
+    Hobby page
+    <ul>
+        <form method="post">
+            {% csrf_token %}
+            <p>{{ p_form.hobby }}</p>
+            <button type="submit">submit</button>
+        </form>
+    </ul>
+
+    {% if profiles %}
+        <h3>Full match results:</h3>
+        {% for profile in profiles %}
+            <div><a href="{% url 'profile' profile.id %}">{{ profile }}</a></div>
+        {% endfor %}
+    {% endif %}
+
+    {% if profiles2 %}
+        <h3>Any match results:</h3>
+        {% for profile2 in profiles2 %}
+            <div><a href="{% url 'profile' profile2.id %}">{{ profile2 }}</a></div>
+        {% endfor %}
+    {% endif %}
+
+{% endblock content %}

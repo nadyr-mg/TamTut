@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login
-from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo
+from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList
 from core.models import Profile
 
 
@@ -31,10 +31,11 @@ def register(request):
     return render(request, 'core/register.html', context)
 
 
-def profile(request):
-    prof = Profile.objects.get(id=request.user.profile.id)
+def profile(request, pk):
+    prof = Profile.objects.get(id=pk)
     hobbies = prof.hobby.all()
-    return render(request, 'core/profile.html', {'hobbies': hobbies})
+    context = {'hobbies': hobbies, 'prof': prof}
+    return render(request, 'core/profile.html', context)
 
 
 def edit_profile(request):
@@ -46,9 +47,30 @@ def edit_profile(request):
         if u_form.is_valid() and p_form.is_valid():
             u_form.save()
             p_form.save()
-            return redirect(reverse('profile'))
+            return redirect(reverse('home'))
     else:
         u_form = EditUserInfo(instance=request.user)
         p_form = EditProfileInfo(instance=request.user.profile)
     context = {'u_form': u_form, 'p_form': p_form}
     return render(request, 'core/edit_profile.html', context)
+
+
+def hobby_page(request):
+    profiles = []
+    if request.method == 'POST':
+        p_form = HobbyList(request.POST)
+        if p_form.is_valid():
+            # return list of users with common hobbies
+            hobbies = p_form.cleaned_data['hobby']
+            profiles = Profile.objects.all()
+            for hobby in hobbies:
+                profiles = profiles.filter(hobby__hobby=hobby)
+
+            profiles2 = Profile.objects.filter(hobby__in=hobbies).distinct()
+
+            context = {'p_form': p_form, 'profiles': profiles, 'profiles2': profiles2, }
+            return render(request, 'core/hobby_page.html', context)
+    else:
+        p_form = HobbyList()
+    context = {'p_form': p_form, 'profiles': profiles}
+    return render(request, 'core/hobby_page.html', context)

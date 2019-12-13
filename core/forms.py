@@ -24,3 +24,9 @@ class EditUserInfo(forms.ModelForm):
     class Meta:
         model = User
         fields = ('first_name', 'last_name', 'email')
+
+
+class HobbyList(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ('hobby',)

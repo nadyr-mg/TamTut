@@ -1,18 +1,20 @@
 {% extends 'core/wrapper.html' %}
 
 {% block content %}
-<ul>
-    <h2>Hi, {{ user.username }}</h2>
-    <img src="{{ user.profile.image.url }}">
-    <p>Email: {{ user.email }}</p>
-    <p>First name: {{ user.first_name }}</p>
-    <p>Last name: {{ user.last_name }}</p>
-<h5>Your hobbies:</h5>
-    {% for hobby in hobbies %}
-        <li>{{ hobby }}</li>
+    <ul>
+        <h2>Hi, {{ prof.user.username }}</h2>
+        <img src="{{ prof.image.url }}">
+        <p>Email: {{ prof.user.email }}</p>
+        <p>First name: {{ prof.user.first_name }}</p>
+        <p>Last name: {{ prof.user.last_name }}</p>
+        <h5>Your hobbies:</h5>
+        {% for hobby in hobbies %}
+            <li>{{ hobby }}</li>
         {% empty %}
-        <p>There are no hobbies yet!</p>
-    {% endfor %}
-    <h3><a href="{% url 'edit_profile' %}">Edit Profile</a></h3>
-</ul>
+            <p>There are no hobbies yet!</p>
+        {% endfor %}
+        {% if  user.profile.id == prof.id %}
+            <h3><a href="{% url 'edit_profile' %}">Edit Profile</a></h3>
+        {% endif %}
+    </ul>
 {% endblock content %}
