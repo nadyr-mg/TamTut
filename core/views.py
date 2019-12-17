@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login
-from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList
-from core.models import Profile
+from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, MessageForm
+from core.models import Profile, Message
+from django.http import Http404
 
 
 def home(request):
@@ -32,9 +33,13 @@ def register(request):
 
 
 def profile(request, pk):
-    prof = Profile.objects.get(id=pk)
-    hobbies = prof.hobby.all()
-    context = {'hobbies': hobbies, 'prof': prof}
+    try:
+        prof = Profile.objects.get(id=pk)
+        hobbies = prof.hobby.all()
+        context = {'hobbies': hobbies, 'prof': prof}
+    except Profile.DoesNotExist:
+        raise Http404("Page doesn't exist")
+
     return render(request, 'core/profile.html', context)
 
 
@@ -74,3 +79,18 @@ def hobby_page(request):
         hobbies_form = HobbyList()
     context = {'hobbies_form': hobbies_form, 'profiles': profiles}
     return render(request, 'core/hobby_page.html', context)
+
+
+def message(request):
+    inbox = Message.objects.filter(reciever=request.user)
+    sent_bot = Message.objects.filter(sender=request.user)
+
+    if request.method == 'POST':
+        message = MessageForm(request.POST)
+        if message.is_valid():
+            message.save()
+    else:
+        message = MessageForm()
+
+    context = {'message': message, 'inbox': inbox, 'sent_box': sent_bot}
+    return render(request, 'core/message.html', context)

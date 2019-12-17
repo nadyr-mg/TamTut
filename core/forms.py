@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from core.models import Profile
+from core.models import Profile, Message
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -31,3 +31,9 @@ class HobbyList(forms.ModelForm):
     class Meta:
         model = Profile
         fields = ('hobby',)
+
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ('receiver', 'msg_text',)
