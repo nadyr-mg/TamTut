@@ -82,15 +82,14 @@ def hobby_page(request):
 
 
 def message(request):
-    inbox = Message.objects.filter(reciever=request.user)
-    sent_bot = Message.objects.filter(sender=request.user)
-
     if request.method == 'POST':
-        message = MessageForm(request.POST)
-        if message.is_valid():
-            message.save()
+        msg_form = MessageForm(request.POST)
+        if msg_form.is_valid():
+            receiver = msg_form.cleaned_data['receiver']
+            msg_text = msg_form.cleaned_data['msg_text']
+            Message.objects.create(receiver=receiver, sender=request.user, msg_text=msg_text)
     else:
-        message = MessageForm()
+        msg_form = MessageForm()
 
-    context = {'message': message, 'inbox': inbox, 'sent_box': sent_bot}
+    context = {'msg_form': msg_form}
     return render(request, 'core/message.html', context)

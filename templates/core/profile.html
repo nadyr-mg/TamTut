@@ -2,7 +2,12 @@
 
 {% block content %}
     <ul>
-        <h2>Hi, {{ prof.user.username }}</h2>
+        <h2>
+            {% if user.profile == prof %}
+                Hi,
+            {% endif %}
+            {{ prof.user.username }}
+        </h2>
         <img src="{{ prof.image.url }}">
         <p>Email: {{ prof.user.email }}</p>
         <p>First name: {{ prof.user.first_name }}</p>
@@ -15,6 +20,8 @@
         {% endfor %}
         {% if  user.profile.id == prof.id %}
             <h3><a href="{% url 'edit_profile' %}">Edit Profile</a></h3>
+        {% else %}
+            <p><a href="{% url 'message' %}">Message</a></p>
         {% endif %}
     </ul>
 {% endblock content %}
