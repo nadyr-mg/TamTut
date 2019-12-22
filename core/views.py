@@ -74,3 +74,8 @@ def hobby_page(request):
         hobbies_form = HobbyList()
     context = {'hobbies_form': hobbies_form, 'profiles': profiles}
     return render(request, 'core/hobby_page.html', context)
+
+
+def map_view(request):
+    if request.method == 'GET':
+        return render(request, 'core/map.html')
