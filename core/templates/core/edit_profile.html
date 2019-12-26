@@ -5,11 +5,81 @@
     <h2>EDIT PAGE, {{ user.username }}</h2>
 
     <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ p_form.as_p }}
-    {{ u_form.as_p }}
-    <button type="submit">submit</button>
+        {% csrf_token %}
+        {{ p_form.as_p }}
+        {{ u_form.as_p }}
+        {{ coors_form }}
+
+        <button type="submit">submit</button>
     </form>
 
+    <script src="https://maps.api.2gis.ru/2.0/loader.js?lazy=true"></script>
+    <input id="create" type="button" value="Показать карту"/>
+    <div id="mapBlock"></div>
+    <script>
+
+
+        var locationInfo = document.getElementById('id_coors');
+        var createButton = document.getElementById('create');
+
+        createButton.onclick = function () {
+            var container = document.createElement('div'),
+                mapBlock = document.getElementById('mapBlock');
+
+
+            container.id = 'map';
+            container.style.width = '100%';
+            container.style.height = '400px';
+            mapBlock.appendChild(container);
+
+            DG.then(function () {
+                var map,
+                    marker;
+                var myIcon = DG.icon({
+                    iconUrl: 'https://images.vexels.com/media/users/3/142675/isolated/preview/84e468a8fff79b66406ef13d3b8653e2-house-location-marker-icon-by-vexels.png',
+                    iconRetinaUrl: 'https://images.vexels.com/media/users/3/142675/isolated/preview/84e468a8fff79b66406ef13d3b8653e2-house-location-marker-icon-by-vexels.png',
+                    iconSize: [30, 30],
+                    iconAnchor: [30, 30],
+                });
+
+                map = DG.map('map', {
+                    center: [42.93189, 47.55642],
+                    zoom: 13
+                });
+
+
+                map.locate({setView: true})
+                    .on('locationfound', function (e) {
+                        marker = DG.marker([e.latitude, e.longitude], {
+                            draggable: true,
+                            icon: myIcon
+                        }).addTo(map).bindPopup('Я');
+                        marker.on('move', function (e) {
+                            locationInfo.setAttribute("value", e.target._latlng.lat.toFixed(6) + ', ' + e.target._latlng.lng.toFixed(6)
+                            )
+                        });
+                        locationInfo.setAttribute("value", marker.getLatLng().lat.toFixed(6) + ', ' + marker.getLatLng().lng.toFixed(6));
+
+                    })
+                    .on('locationerror', function (e) {
+                        {% if request.user.profile.latitude %}
+                            marker = DG.marker([{{ request.user.profile.latitude }}, {{ request.user.profile.longitude }}], {
+                                draggable: true, icon: myIcon
+                            }).addTo(map).bindPopup('Я');
+                            marker.on('move', function (e) {
+
+                                locationInfo.setAttribute("value", e.target._latlng.lat.toFixed(6) + ', ' + e.target._latlng.lng.toFixed(6))
+                            });
+                            locationInfo.setAttribute("value", marker.getLatLng().lat.toFixed(6) + ', ' + marker.getLatLng().lng.toFixed(6));
+
+
+                        {% endif %}
+                    });
+
+
+            });
+
+        }
+    </script>
 
 {% endblock content %}

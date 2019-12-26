@@ -31,3 +31,7 @@ class HobbyList(forms.ModelForm):
     class Meta:
         model = Profile
         fields = ('hobby',)
+
+
+class CoorsForm(forms.Form):
+    coors = forms.CharField(max_length=300, required=False, label='Координаты')
