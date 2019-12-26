@@ -104,6 +104,10 @@ def chat(request):
 def chat_by_user(request, chat_username):
     # TODO: prevent the possibillity to msg urself (p.s when pk == request.user.id)
     # FIXME: handle situation when not existing chat username given
+
+    if chat_username == request.user.username:
+        return redirect(reverse('chat'))
+
     chat_user = User.objects.get(username=chat_username)
     if request.method == 'POST':
         msg_form = MessageForm(request.POST)
