@@ -72,7 +72,15 @@
                             });
                             locationInfo.setAttribute("value", marker.getLatLng().lat.toFixed(6) + ', ' + marker.getLatLng().lng.toFixed(6));
 
+                        {% else %}
+                            marker = DG.marker([42.93189, 47.55642], {
+                                draggable: true, icon: myIcon
+                            }).addTo(map).bindPopup('Я');
+                            marker.on('move', function (e) {
 
+                                locationInfo.setAttribute("value", e.target._latlng.lat.toFixed(6) + ', ' + e.target._latlng.lng.toFixed(6))
+                            });
+                            locationInfo.setAttribute("value", marker.getLatLng().lat.toFixed(6) + ', ' + marker.getLatLng().lng.toFixed(6));
                         {% endif %}
                     });
 

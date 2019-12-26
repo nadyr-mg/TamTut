@@ -58,9 +58,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'TamTut.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
+#local database
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql',
@@ -71,6 +70,7 @@ WSGI_APPLICATION = 'TamTut.wsgi.application'
 #         'PORT': '5432',
 #     }
 # }
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
