@@ -1,8 +1,8 @@
-from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login
+from django.shortcuts import render, redirect, reverse
 
-from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm
-from core.models import Profile, Hobby
+from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, CreatePostForm
+from core.models import Profile, UserFeed
 
 
 def home(request):
@@ -33,10 +33,25 @@ def register(request):
 
 
 def profile(request, pk):
-    prof = Profile.objects.get(id=pk)
-    hobbies = prof.hobby.all()
-    context = {'hobbies': hobbies, 'prof': prof}
-    return render(request, 'core/profile.html', context)
+    if request.method == 'GET':
+        prof = Profile.objects.get(id=pk)
+        create_post_form = CreatePostForm()
+        hobbies = prof.hobby.all()
+
+        user_feed = prof.userfeed_set.all()
+        context = {
+            'hobbies': hobbies,
+            'prof': prof,
+            'create_post_form': create_post_form,
+            'user_feed': user_feed
+        }
+        return render(request, 'core/profile.html', context)
+    else:
+        create_post_form = CreatePostForm(request.POST or None)
+        if create_post_form.is_valid():
+            post_text = create_post_form.cleaned_data['text']
+            UserFeed.objects.create(user_profile_posted=request.user.profile, text=post_text)
+            return redirect('profile', pk=request.user.profile.pk)
 
 
 def edit_profile(request):
@@ -58,8 +73,6 @@ def edit_profile(request):
                 logged_user_profile.longitude = long
                 logged_user_profile.save()
                 return redirect(reverse('edit_profile'))
-
-
     else:
         u_form = EditUserInfo(instance=request.user)
         p_form = EditProfileInfo(instance=request.user.profile)
@@ -71,27 +84,6 @@ def edit_profile(request):
     }
 
     return render(request, 'core/edit_profile.html', context)
-
-
-def hobby_page(request):
-    profiles = []
-    if request.method == 'POST':
-        hobbies_form = HobbyList(request.POST)
-        if hobbies_form.is_valid():
-            # return list of users with common hobbies
-            hobbies = hobbies_form.cleaned_data['hobby']
-            profiles = Profile.objects.all()
-            for hobby in hobbies:
-                profiles = profiles.filter(hobby__hobby=hobby)
-
-            profiles2 = Profile.objects.filter(hobby__in=hobbies).distinct()
-
-            context = {'hobbies_form': hobbies_form, 'profiles': profiles, 'profiles2': profiles2, }
-            return render(request, 'core/hobby_page.html', context)
-    else:
-        hobbies_form = HobbyList()
-    context = {'hobbies_form': hobbies_form, 'profiles': profiles}
-    return render(request, 'core/hobby_page.html', context)
 
 
 def map_view(request, *args, **kwargs):
@@ -120,5 +112,3 @@ def map_view(request, *args, **kwargs):
                 'any_match_profiles': any_match_profiles
             }
             return render(request, 'core/map.html', context)
-
-

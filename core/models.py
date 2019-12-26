@@ -37,3 +37,12 @@ class Profile(models.Model):
             output_size = (300, 300)
             img.thumbnail(output_size)
             img.save(self.image.path)
+
+
+class UserFeed(models.Model):
+    user_profile_posted = models.ForeignKey(Profile, default=None, on_delete=models.CASCADE)
+    text = models.CharField(max_length=500)
+    date_posted = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title

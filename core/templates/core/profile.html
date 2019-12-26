@@ -1,6 +1,8 @@
 {% extends 'core/wrapper.html' %}
 
 {% block content %}
+
+<table style="display: inline-block">
     <ul>
         <h2>Hi, {{ prof.user.username }}</h2>
         <img src="{{ prof.image.url }}">
@@ -17,4 +19,25 @@
             <h3><a href="{% url 'edit_profile' %}">Edit Profile</a></h3>
         {% endif %}
     </ul>
+    <br>
+    <form method="post">
+        {% csrf_token %}
+        <p>
+            {{ create_post_form }}
+        </p>
+        <button type="submit">Post</button>
+    </form>
+   </table>
+    <table >
+     <tr>
+        {% for post in user_feed %}
+            <ul>
+                <p style="text-align:-webkit-right;">{{ prof.user.username }} |  {{ post.date_posted }}</p>
+                <p style="text-align:-webkit-right;">{{ post.text }}</p>
+            </ul>
+        {% endfor %}
+    </tr>
+    </table>
+
+
 {% endblock content %}

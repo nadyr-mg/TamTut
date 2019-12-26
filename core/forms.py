@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from core.models import Profile
+from core.models import Profile, UserFeed
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -35,3 +35,12 @@ class HobbyList(forms.ModelForm):
 
 class CoorsForm(forms.Form):
     coors = forms.CharField(max_length=300, required=False, label='Координаты')
+
+
+class CreatePostForm(forms.ModelForm):
+    class Meta:
+        model = UserFeed
+        fields = ('text',)
+        widgets = {
+            'text': forms.Textarea(attrs={'rows': 3}),
+        }
