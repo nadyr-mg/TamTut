@@ -4,7 +4,7 @@
         <a href="{% url 'register' %}">Register</a> -
         <a href="{% url 'login' %}">Log In</a>
     {% else %}
-        <a href="{% url 'profile' user.profile.id %}">{{ user.username }}</a> -
+        <a href="{% url 'profile' user.id %}">{{ user.username }}</a> -
         <a href="{% url 'logout' %}">Log Out</a>
     {% endif %}
 </div>

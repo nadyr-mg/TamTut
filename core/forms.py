@@ -36,4 +36,10 @@ class HobbyList(forms.ModelForm):
 class MessageForm(forms.ModelForm):
     class Meta:
         model = Message
-        fields = ('receiver', 'msg_text',)
+        fields = ('msg_text',)
+        labels = {
+            'msg_text': ''
+        }
+        widgets = {
+            'msg_text': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Напишите сообщение...', }),
+        }

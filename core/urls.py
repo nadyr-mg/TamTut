@@ -10,5 +10,6 @@ urlpatterns = [
     path('profile/<int:pk>/', views.profile, name='profile'),
     path('profile/edit/', views.edit_profile, name='edit_profile'),
     path('hobby_page/', views.hobby_page, name='hobby_page'),
-    path('message/', views.message, name='message'),
+    path('chat/', views.chat, name='chat'),
+    path('chat/<str:chat_username>/', views.chat_by_user, name='chat_by_user'),
 ]
