@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect, reverse
+from django.core.paginator import Paginator
 
 from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, CreatePostForm
 from core.models import Profile, UserFeed
@@ -39,6 +40,9 @@ def profile(request, pk):
         hobbies = prof.hobby.all()
 
         user_feed = prof.userfeed_set.all()
+        user_feed = Paginator(user_feed, 6)
+        page = request.GET.get('page')
+        user_feed = user_feed.get_page(page)
         context = {
             'hobbies': hobbies,
             'prof': prof,

@@ -2,41 +2,58 @@
 
 {% block content %}
 
-<table style="display: inline-block">
-    <ul>
-        <h2>Hi, {{ prof.user.username }}</h2>
-        <img src="{{ prof.image.url }}">
-        <p>Email: {{ prof.user.email }}</p>
-        <p>First name: {{ prof.user.first_name }}</p>
-        <p>Last name: {{ prof.user.last_name }}</p>
-        <h5>Your hobbies:</h5>
-        {% for hobby in hobbies %}
-            <li>{{ hobby }}</li>
-        {% empty %}
-            <p>There are no hobbies yet!</p>
-        {% endfor %}
-        {% if  user.profile.id == prof.id %}
-            <h3><a href="{% url 'edit_profile' %}">Edit Profile</a></h3>
+    <table style="display: inline-block">
+        <ul>
+            <h2>Hi, {{ prof.user.username }}</h2>
+            <img src="{{ prof.image.url }}">
+            <p>Email: {{ prof.user.email }}</p>
+            <p>First name: {{ prof.user.first_name }}</p>
+            <p>Last name: {{ prof.user.last_name }}</p>
+            <h5>Your hobbies:</h5>
+            {% for hobby in hobbies %}
+                <li>{{ hobby }}</li>
+            {% empty %}
+                <p>There are no hobbies yet!</p>
+            {% endfor %}
+            {% if  user.profile.id == prof.id %}
+                <h3><a href="{% url 'edit_profile' %}">Edit Profile</a></h3>
+            {% endif %}
+        </ul>
+        <br>
+        <form method="post">
+            {% csrf_token %}
+            <p>
+                {{ create_post_form }}
+            </p>
+            <button type="submit">Post</button>
+        </form>
+    </table>
+    <table>
+        <tr>
+            {% for post in user_feed %}
+                <ul>
+                    <p style="text-align:-webkit-right;">{{ prof.user.username }} | {{ post.date_posted }}</p>
+                    <p style="text-align:-webkit-right;">{{ post.text }}</p>
+                </ul>
+            {% endfor %}
+        </tr>
+        <div class="pagination" style="text-align:-webkit-right;">
+    <span class="step-links">
+        {% if user_feed.has_previous %}
+            <a href="?page=1">&laquo; first</a>
+            <a href="?page={{ user_feed.previous_page_number }}">previous</a>
         {% endif %}
-    </ul>
-    <br>
-    <form method="post">
-        {% csrf_token %}
-        <p>
-            {{ create_post_form }}
-        </p>
-        <button type="submit">Post</button>
-    </form>
-   </table>
-    <table >
-     <tr>
-        {% for post in user_feed %}
-            <ul>
-                <p style="text-align:-webkit-right;">{{ prof.user.username }} |  {{ post.date_posted }}</p>
-                <p style="text-align:-webkit-right;">{{ post.text }}</p>
-            </ul>
-        {% endfor %}
-    </tr>
+
+        <span class="current">
+            Page {{ user_feed.number }} of {{ user_feed.paginator.num_pages }}.
+        </span>
+
+        {% if user_feed.has_next %}
+            <a href="?page={{ user_feed.next_page_number }}">next</a>
+            <a href="?page={{ user_feed.paginator.num_pages }}">last &raquo;</a>
+        {% endif %}
+    </span>
+        </div>
     </table>
 
 
