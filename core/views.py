@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login
@@ -85,6 +86,7 @@ def hobby_page(request):
     return render(request, 'core/hobby_page.html', context)
 
 
+@login_required
 def chat(request):
     all_msgs = Message.objects.filter(Q(sender=request.user) | Q(receiver=request.user)).order_by('date_sent')
     interlocutors = []
@@ -101,22 +103,26 @@ def chat(request):
     return render(request, 'core/chat.html', context)
 
 
+@login_required
 def chat_by_user(request, chat_username):
     # TODO: prevent the possibillity to msg urself (p.s when pk == request.user.id)
     # FIXME: handle situation when not existing chat username given
 
-    if chat_username == request.user.username:
-        return redirect(reverse('chat'))
+    try:
+        if chat_username == request.user.username:
+            return redirect(reverse('chat'))
 
-    chat_user = User.objects.get(username=chat_username)
-    if request.method == 'POST':
-        msg_form = MessageForm(request.POST)
-        if msg_form.is_valid():
-            msg_text = msg_form.cleaned_data['msg_text']
-            Message.objects.create(receiver=chat_user, sender=request.user, msg_text=msg_text)
-            return redirect(reverse('chat_by_user', args=[chat_username]))
-    else:
-        msg_form = MessageForm()
+        chat_user = User.objects.get(username=chat_username)
+        if request.method == 'POST':
+            msg_form = MessageForm(request.POST)
+            if msg_form.is_valid():
+                msg_text = msg_form.cleaned_data['msg_text']
+                Message.objects.create(receiver=chat_user, sender=request.user, msg_text=msg_text)
+                return redirect(reverse('chat_by_user', args=[chat_username]))
+        else:
+            msg_form = MessageForm()
+    except:
+        raise Http404("Page doesn't exist")
 
     # FIXME: handle situation when request.user is unauthorized
     all_msgs = Message.objects.filter(Q(sender=request.user) | Q(receiver=request.user)).order_by('date_sent')
