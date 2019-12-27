@@ -37,6 +37,10 @@ class CoorsForm(forms.Form):
     coors = forms.CharField(max_length=300, required=False, label='Координаты')
 
 
+class FollowButtonForm(forms.Form):
+    follow = forms.BooleanField(initial=True)
+
+
 class CreatePostForm(forms.ModelForm):
     class Meta:
         model = UserFeed
@@ -44,8 +48,3 @@ class CreatePostForm(forms.ModelForm):
         widgets = {
             'text': forms.Textarea(attrs={'rows': 3}),
         }
-
-
-class FollowButtonForm(forms.Form):
-    follow = forms.BooleanField(initial=True)
-

@@ -3,8 +3,8 @@ from django.shortcuts import render, redirect, reverse
 from django.core.paginator import Paginator
 from django.views.generic import ListView
 
-from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, CreatePostForm, \
-    FollowButtonForm
+from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, FollowButtonForm, \
+    CreatePostForm
 from core.models import Profile, UserFeed, Followers
 
 
