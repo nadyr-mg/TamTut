@@ -10,12 +10,23 @@ class Hobby(models.Model):
         return self.hobby
 
 
+class Followers(models.Model):
+    user = models.OneToOneField(User, null=True, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.user.username
+
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     hobby = models.ManyToManyField(Hobby)
     image = models.ImageField(default='default.jpg', upload_to='profile_pics')
+
     latitude = models.FloatField(null=True, default=None, blank=True)
     longitude = models.FloatField(null=True, default=None, blank=True)
+
+    following = models.ManyToManyField(Followers, related_name="following")
+    followed = models.OneToOneField(Followers, related_name="followed", null=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return f'{self.user.username} Profile'
@@ -45,4 +56,4 @@ class UserFeed(models.Model):
     date_posted = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.title
+        return f'By {self.user_profile_posted.user.username} - {self.text[:10]}'

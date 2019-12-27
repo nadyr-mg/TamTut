@@ -4,8 +4,31 @@
 
     <table style="display: inline-block">
         <ul>
-            <h2>Hi, {{ prof.user.username }}</h2>
+
+            <h2>{{ prof.user.username }}
+                {% if request.user != prof.user %}
+                    {% if prof.followed not in request.user.profile.following.all %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <p>
+                                {{ follow_button_form.follow.as_hidden }}
+                            </p>
+                            <button type="submit">Follow</button>
+                        </form>
+                    {% else %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <p>
+                                {{ follow_button_form.follow.as_hidden }}
+                            </p>
+                            <button type="submit">Unfollow</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </h2>
+
             <img src="{{ prof.image.url }}">
+
             <p>Email: {{ prof.user.email }}</p>
             <p>First name: {{ prof.user.first_name }}</p>
             <p>Last name: {{ prof.user.last_name }}</p>
@@ -20,19 +43,21 @@
             {% endif %}
         </ul>
         <br>
-        <form method="post">
-            {% csrf_token %}
-            <p>
-                {{ create_post_form }}
-            </p>
-            <button type="submit">Post</button>
-        </form>
+        {% if request.user.profile == prof %}
+            <form method="post">
+                {% csrf_token %}
+                <p>
+                    {{ create_post_form }}
+                </p>
+                <button type="submit">Post</button>
+            </form>
+        {% endif %}
     </table>
     <table>
         <tr>
             {% for post in user_feed %}
                 <ul>
-                    <p style="text-align:-webkit-right;">{{ prof.user.username }} | {{ post.date_posted }}</p>
+                    <p style="text-align:-webkit-right;">{{ post.date_posted }}</p>
                     <p style="text-align:-webkit-right;">{{ post.text }}</p>
                 </ul>
             {% endfor %}

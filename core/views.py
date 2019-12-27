@@ -1,9 +1,11 @@
 from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect, reverse
 from django.core.paginator import Paginator
+from itertools import chain
 
-from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, CreatePostForm
-from core.models import Profile, UserFeed
+from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, CreatePostForm, \
+    FollowButtonForm
+from core.models import Profile, UserFeed, Followers
 
 
 def home(request):
@@ -34,10 +36,12 @@ def register(request):
 
 
 def profile(request, pk):
+    prof = Profile.objects.get(id=pk)
     if request.method == 'GET':
-        prof = Profile.objects.get(id=pk)
         create_post_form = CreatePostForm()
         hobbies = prof.hobby.all()
+
+        follow_button_form = FollowButtonForm()
 
         user_feed = prof.userfeed_set.all()
         user_feed = Paginator(user_feed, 6)
@@ -47,15 +51,30 @@ def profile(request, pk):
             'hobbies': hobbies,
             'prof': prof,
             'create_post_form': create_post_form,
-            'user_feed': user_feed
+            'user_feed': user_feed,
+            'follow_button_form': follow_button_form
         }
         return render(request, 'core/profile.html', context)
     else:
         create_post_form = CreatePostForm(request.POST or None)
+        follow_button_form = FollowButtonForm(request.POST or None)
+        if follow_button_form.is_valid():
+            following = follow_button_form.cleaned_data['follow']
+            if following is True:
+                cur_profile = request.user.profile
+                prof_followed = prof.followed
+                if prof.followed not in cur_profile.following.all():
+                    cur_profile.following.set(list(chain(cur_profile.following.all(), Followers.objects.filter(
+                        user=prof.followed.user))))
+                else:
+                    cur_profile.following.remove(prof_followed)
+                return redirect('profile', pk=prof.pk)
+
         if create_post_form.is_valid():
             post_text = create_post_form.cleaned_data['text']
             UserFeed.objects.create(user_profile_posted=request.user.profile, text=post_text)
-            return redirect('profile', pk=request.user.profile.pk)
+            return redirect('profile', pk=prof.pk)
+        return redirect('profile', pk=prof.pk)
 
 
 def edit_profile(request):

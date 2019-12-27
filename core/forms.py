@@ -44,3 +44,8 @@ class CreatePostForm(forms.ModelForm):
         widgets = {
             'text': forms.Textarea(attrs={'rows': 3}),
         }
+
+
+class FollowButtonForm(forms.Form):
+    follow = forms.BooleanField(initial=True)
+
