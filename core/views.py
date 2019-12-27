@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect, reverse
 from django.core.paginator import Paginator
-from itertools import chain
+from django.views.generic import ListView
 
 from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, CreatePostForm, \
     FollowButtonForm
@@ -41,6 +41,8 @@ def profile(request, pk):
         create_post_form = CreatePostForm()
         hobbies = prof.hobby.all()
 
+        followed_by = Profile.objects.filter(following__user=prof.user)
+
         follow_button_form = FollowButtonForm()
 
         user_feed = prof.userfeed_set.all()
@@ -52,7 +54,8 @@ def profile(request, pk):
             'prof': prof,
             'create_post_form': create_post_form,
             'user_feed': user_feed,
-            'follow_button_form': follow_button_form
+            'follow_button_form': follow_button_form,
+            'followed_by': followed_by
         }
         return render(request, 'core/profile.html', context)
     else:
@@ -64,8 +67,7 @@ def profile(request, pk):
                 cur_profile = request.user.profile
                 prof_followed = prof.followed
                 if prof.followed not in cur_profile.following.all():
-                    cur_profile.following.set(list(chain(cur_profile.following.all(), Followers.objects.filter(
-                        user=prof.followed.user))))
+                    cur_profile.following.add(prof_followed)
                 else:
                     cur_profile.following.remove(prof_followed)
                 return redirect('profile', pk=prof.pk)
@@ -75,6 +77,22 @@ def profile(request, pk):
             UserFeed.objects.create(user_profile_posted=request.user.profile, text=post_text)
             return redirect('profile', pk=prof.pk)
         return redirect('profile', pk=prof.pk)
+
+
+class ProfileFollowersView(ListView):
+    template_name = 'core/profile_followers_page.html'
+    paginate_by = 50
+
+    def get_queryset(self):
+        return Profile.objects.filter(following__user=Profile.objects.get(pk=self.kwargs['pk']).user)
+
+
+class ProfileFollowingView(ListView):
+    template_name = 'core/profile_following_page.html'
+    paginate_by = 50
+
+    def get_queryset(self):
+        return Profile.objects.get(pk=self.kwargs['pk']).following.all()
 
 
 def edit_profile(request):
