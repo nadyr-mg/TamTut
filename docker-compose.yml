@@ -6,7 +6,7 @@ services:
     tty: true
     container_name: core_container
     build: .
-    command: bash -c "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: bash -c "python manage.py makemigrations --merge && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     volumes:
       - ./:/src
     ports:

@@ -1,3 +1,5 @@
+from itertools import chain
+
 from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect, reverse
 from django.core.paginator import Paginator
@@ -12,7 +14,23 @@ def home(request):
     if request.user.is_anonymous:
         return redirect('login')
     else:
-        return render(request, 'core/home.html')
+        following_profiles = request.user.profile.following.all()
+        all_posts = UserFeed.objects.all()
+        followers_feed = None
+        for profile in following_profiles:
+            if followers_feed is not None:
+                followers_feed = list(chain(followers_feed, all_posts.filter(user_profile_posted=profile.user.profile)))
+            else:
+                followers_feed = all_posts.filter(user_profile_posted=profile.user.profile)
+        if followers_feed:
+            followers_feed = sorted(followers_feed, key=lambda x: x.date_posted, reverse=True)
+            followers_feed = Paginator(followers_feed, 20)
+            page = request.GET.get('page')
+            followers_feed = followers_feed.get_page(page)
+        context = {
+            'followers_feed': followers_feed
+        }
+        return render(request, 'core/home.html', context)
 
 
 def register(request):
@@ -46,7 +64,7 @@ def profile(request, pk):
         follow_button_form = FollowButtonForm()
 
         user_feed = prof.userfeed_set.all()
-        user_feed = Paginator(user_feed, 6)
+        user_feed = Paginator(user_feed, 8)
         page = request.GET.get('page')
         user_feed = user_feed.get_page(page)
         context = {

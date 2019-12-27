@@ -9,5 +9,26 @@
         <a href="{% url 'map_page' %}">Map</a>
     </p>
 
+    {% for post in followers_feed %}
+        <ul>
+            <a href="{% url 'profile' post.user_profile_posted.pk %}"
+               style="text-align:justify">{{ post.user_profile_posted.user.username }} </a>| {{ post.date_posted }}
+            <p style="text-align:justify">{{ post.text }}</p>
+        </ul>
+    {% endfor %}
+    {% if followers_feed is not None %}
+        {% if followers_feed.has_previous %}
+            <a href="?page=1">&laquo; first</a>
+            <a href="?page={{ followers_feed.previous_page_number }}">previous</a>
+        {% endif %}
 
+        <span class="current">
+                Page {{ followers_feed.number }} of {{ followers_feed.paginator.num_pages }}.
+            </span>
+
+        {% if followers_feed.has_next %}
+            <a href="?page={{ followers_feed.next_page_number }}">next</a>
+            <a href="?page={{ followers_feed.paginator.num_pages }}">last &raquo;</a>
+        {% endif %}
+    {% endif %}
 {% endblock content %}
