@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login
@@ -8,11 +9,9 @@ from django.contrib.auth.models import User
 from django.http import Http404
 
 
+@login_required(login_url='login')
 def home(request):
-    if request.user.is_anonymous:
-        return redirect('login')
-    else:
-        return render(request, 'core/home.html')
+    return render(request, 'core/home.html')
 
 
 def register(request):
@@ -86,7 +85,7 @@ def hobby_page(request):
     return render(request, 'core/hobby_page.html', context)
 
 
-@login_required
+@login_required(login_url='login')
 def chat(request):
     all_msgs = Message.objects.filter(Q(sender=request.user) | Q(receiver=request.user)).order_by('date_sent')
     interlocutors = []
@@ -103,28 +102,25 @@ def chat(request):
     return render(request, 'core/chat.html', context)
 
 
-@login_required
+@login_required(login_url='login')
 def chat_by_user(request, chat_username):
-    # TODO: prevent the possibillity to msg urself (p.s when pk == request.user.id)
-    # FIXME: handle situation when not existing chat username given
+    if chat_username == request.user.username:
+        return redirect(reverse('chat'))
 
     try:
-        if chat_username == request.user.username:
-            return redirect(reverse('chat'))
-
         chat_user = User.objects.get(username=chat_username)
-        if request.method == 'POST':
-            msg_form = MessageForm(request.POST)
-            if msg_form.is_valid():
-                msg_text = msg_form.cleaned_data['msg_text']
-                Message.objects.create(receiver=chat_user, sender=request.user, msg_text=msg_text)
-                return redirect(reverse('chat_by_user', args=[chat_username]))
-        else:
-            msg_form = MessageForm()
-    except:
-        raise Http404("Page doesn't exist")
+    except ObjectDoesNotExist:
+        raise Http404("User doesn't exist")
 
-    # FIXME: handle situation when request.user is unauthorized
+    if request.method == 'POST':
+        msg_form = MessageForm(request.POST)
+        if msg_form.is_valid():
+            msg_text = msg_form.cleaned_data['msg_text']
+            Message.objects.create(receiver=chat_user, sender=request.user, msg_text=msg_text)
+            return redirect(reverse('chat_by_user', args=[chat_username]))
+    else:
+        msg_form = MessageForm()
+
     all_msgs = Message.objects.filter(Q(sender=request.user) | Q(receiver=request.user)).order_by('date_sent')
     interlocutors = []
     for msg in all_msgs:
