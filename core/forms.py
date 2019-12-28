@@ -43,3 +43,7 @@ class MessageForm(forms.ModelForm):
         widgets = {
             'msg_text': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Напишите сообщение...', }),
         }
+
+
+class CoorsForm(forms.Form):
+    coors = forms.CharField(max_length=300, required=False, label='Координаты')

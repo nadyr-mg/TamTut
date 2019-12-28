@@ -3,8 +3,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login
-from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, MessageForm
-from core.models import Profile, Message
+from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, MessageForm, CoorsForm
+from core.models import Profile, Message, Hobby
 from django.contrib.auth.models import User
 from django.http import Http404
 
@@ -53,14 +53,31 @@ def edit_profile(request):
         p_form = EditProfileInfo(request.POST,
                                  request.FILES,
                                  instance=request.user.profile)
+        coors_form = CoorsForm(request.POST or None)
         if u_form.is_valid() and p_form.is_valid():
             u_form.save()
             p_form.save()
-            return redirect(reverse('profile', args=[request.user.id]))
+        if coors_form.is_valid():
+            coors = coors_form.cleaned_data.get('coors')
+            if coors:
+                lat, long = float(coors.split(', ')[0]), float(coors.split(', ')[1])
+                logged_user_profile = Profile.objects.get(user=request.user)
+                logged_user_profile.latitude = lat
+                logged_user_profile.longitude = long
+                logged_user_profile.save()
+                return redirect(reverse('profile', args=[request.user.id]))
+
+
     else:
         u_form = EditUserInfo(instance=request.user)
         p_form = EditProfileInfo(instance=request.user.profile)
-    context = {'u_form': u_form, 'p_form': p_form}
+        coors_form = CoorsForm()
+    context = {
+        'u_form': u_form,
+        'p_form': p_form,
+        'coors_form': coors_form,
+    }
+
     return render(request, 'core/edit_profile.html', context)
 
 
@@ -136,3 +153,31 @@ def chat_by_user(request, chat_username):
     context = {'msg_form': msg_form, 'new_all_msgs': msgs_by_user, 'chat_user': chat_user,
                'chat_username': chat_username, 'interlocutors': interlocutors}
     return render(request, 'core/chat.html', context)
+
+
+def map_view(request, *args, **kwargs):
+    hobbies_form = HobbyList()
+    all_profiles = Profile.objects.all()
+    if request.method == 'GET':
+        cur_user_hobbies = request.user.profile.hobby.all()
+        matched_profiles = all_profiles.filter(hobby__in=cur_user_hobbies).distinct().exclude(
+            user=request.user)
+
+        context = {
+            'matched_profiles': matched_profiles,
+            'hobbies_form': hobbies_form,
+        }
+        return render(request, 'core/map.html', context)
+    else:
+        hobbies_form = HobbyList(request.POST or None)
+        if hobbies_form.is_valid():
+            hobbies = hobbies_form.cleaned_data['hobby']
+            matched_profiles = request.user.profile.filter_by_hobbies(hobbies).exclude(user=request.user)
+            any_match_profiles = Profile.objects.filter(hobby__in=hobbies).distinct()
+
+            context = {
+                'matched_profiles': matched_profiles,
+                'hobbies_form': hobbies_form,
+                'any_match_profiles': any_match_profiles
+            }
+            return render(request, 'core/map.html', context)
