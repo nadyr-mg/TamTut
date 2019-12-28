@@ -62,27 +62,27 @@ WSGI_APPLICATION = 'TamTut.wsgi.application'
 
 
 #local database
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'TamTutLocaldb',
-#         'USER': 'postgres',
-#         'PASSWORD': 'qwerty123',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#     }
-# }
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mydb',
+        'NAME': 'TamTutLocaldb',
         'USER': 'postgres',
-        'PASSWORD': 'testing321',
-        'HOST': 'db',
+        'PASSWORD': 'qwerty123',
+        'HOST': 'localhost',
         'PORT': '5432',
     }
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'mydb',
+#         'USER': 'postgres',
+#         'PASSWORD': 'testing321',
+#         'HOST': 'db',
+#         'PORT': '5432',
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators

@@ -1,3 +1,6 @@
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login
 from django.core.paginator import Paginator
@@ -9,7 +12,7 @@ from itertools import chain
 
 from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, MessageForm, \
     FollowButtonForm, CreatePostForm
-from core.models import Profile, Hobby, Message
+from core.models import Profile, Hobby, Message, UserFeed
 
 
 @login_required(login_url='login')
@@ -51,6 +54,22 @@ def register(request):
 
     context = {'form': form}
     return render(request, 'core/register.html', context)
+
+
+class ProfileFollowersView(ListView):
+    template_name = 'core/profile_followers_page.html'
+    paginate_by = 50
+
+    def get_queryset(self):
+        return Profile.objects.filter(following__user=Profile.objects.get(pk=self.kwargs['pk']).user)
+
+
+class ProfileFollowingView(ListView):
+    template_name = 'core/profile_following_page.html'
+    paginate_by = 50
+
+    def get_queryset(self):
+        return Profile.objects.get(pk=self.kwargs['pk']).following.all()
 
 
 def profile(request, pk):
@@ -100,6 +119,7 @@ def profile(request, pk):
             UserFeed.objects.create(user_profile_posted=request.user.profile, text=post_text)
             return redirect('profile', pk=prof.pk)
         return redirect('profile', pk=prof.pk)
+
 
 def edit_profile(request):
     if request.method == 'POST':
@@ -162,6 +182,7 @@ def map_view(request, *args, **kwargs):
             }
             return render(request, 'core/map.html', context)
 
+
 @login_required(login_url='login')
 def chat(request):
     all_msgs = Message.objects.filter(Q(sender=request.user) | Q(receiver=request.user)).order_by('date_sent')
@@ -213,4 +234,3 @@ def chat_by_user(request, chat_username):
     context = {'msg_form': msg_form, 'new_all_msgs': msgs_by_user, 'chat_user': chat_user,
                'chat_username': chat_username, 'interlocutors': interlocutors}
     return render(request, 'core/chat.html', context)
-
