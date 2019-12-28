@@ -140,8 +140,6 @@ def edit_profile(request):
                 logged_user_profile.longitude = long
                 logged_user_profile.save()
                 return redirect(reverse('profile', args=[request.user.id]))
-
-
     else:
         u_form = EditUserInfo(instance=request.user)
         p_form = EditProfileInfo(instance=request.user.profile)
