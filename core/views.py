@@ -1,15 +1,17 @@
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login
+from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, MessageForm, CoorsForm
+from core.models import Profile, Message, Hobby
+from django.contrib.auth.models import User
+from django.http import Http404
 
-from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm
-from core.models import Profile, Hobby
 
-
+@login_required(login_url='login')
 def home(request):
-    if request.user.is_anonymous:
-        return redirect('login')
-    else:
-        return render(request, 'core/home.html')
+    return render(request, 'core/home.html')
 
 
 def register(request):
@@ -33,9 +35,15 @@ def register(request):
 
 
 def profile(request, pk):
-    prof = Profile.objects.get(id=pk)
-    hobbies = prof.hobby.all()
-    context = {'hobbies': hobbies, 'prof': prof}
+    try:
+        profile_user = User.objects.get(id=pk)
+        prof = Profile.objects.get(user=profile_user)
+
+        hobbies = prof.hobby.all()
+        context = {'hobbies': hobbies, 'prof': prof}
+    except Profile.DoesNotExist:
+        raise Http404("Page doesn't exist")
+
     return render(request, 'core/profile.html', context)
 
 
@@ -57,7 +65,7 @@ def edit_profile(request):
                 logged_user_profile.latitude = lat
                 logged_user_profile.longitude = long
                 logged_user_profile.save()
-                return redirect(reverse('edit_profile'))
+                return redirect(reverse('profile', args=[request.user.id]))
 
 
     else:
@@ -82,7 +90,7 @@ def hobby_page(request):
             hobbies = hobbies_form.cleaned_data['hobby']
             profiles = Profile.objects.all()
             for hobby in hobbies:
-                profiles = profiles.filter(hobby__hobby=hobby)
+                profiles = profiles.filter(hobby__name=hobby)
 
             profiles2 = Profile.objects.filter(hobby__in=hobbies).distinct()
 
@@ -92,6 +100,59 @@ def hobby_page(request):
         hobbies_form = HobbyList()
     context = {'hobbies_form': hobbies_form, 'profiles': profiles}
     return render(request, 'core/hobby_page.html', context)
+
+
+@login_required(login_url='login')
+def chat(request):
+    all_msgs = Message.objects.filter(Q(sender=request.user) | Q(receiver=request.user)).order_by('date_sent')
+    interlocutors = []
+    for msg in all_msgs:
+        if msg.sender == request.user:
+            interlocutor = msg.receiver
+        else:
+            interlocutor = msg.sender
+
+        if interlocutor not in interlocutors:
+            interlocutors.append(interlocutor)
+
+    context = {'interlocutors': interlocutors}
+    return render(request, 'core/chat.html', context)
+
+
+@login_required(login_url='login')
+def chat_by_user(request, chat_username):
+    if chat_username == request.user.username:
+        return redirect(reverse('chat'))
+
+    try:
+        chat_user = User.objects.get(username=chat_username)
+    except ObjectDoesNotExist:
+        raise Http404("User doesn't exist")
+
+    if request.method == 'POST':
+        msg_form = MessageForm(request.POST)
+        if msg_form.is_valid():
+            msg_text = msg_form.cleaned_data['msg_text']
+            Message.objects.create(receiver=chat_user, sender=request.user, msg_text=msg_text)
+            return redirect(reverse('chat_by_user', args=[chat_username]))
+    else:
+        msg_form = MessageForm()
+
+    all_msgs = Message.objects.filter(Q(sender=request.user) | Q(receiver=request.user)).order_by('date_sent')
+    interlocutors = []
+    for msg in all_msgs:
+        if msg.sender == request.user:
+            interlocutor = msg.receiver
+        else:
+            interlocutor = msg.sender
+
+        if interlocutor not in interlocutors:
+            interlocutors.append(interlocutor)
+
+    msgs_by_user = all_msgs.filter(Q(sender=chat_user) | Q(receiver=chat_user)).order_by('date_sent')
+    context = {'msg_form': msg_form, 'new_all_msgs': msgs_by_user, 'chat_user': chat_user,
+               'chat_username': chat_username, 'interlocutors': interlocutors}
+    return render(request, 'core/chat.html', context)
 
 
 def map_view(request, *args, **kwargs):
@@ -120,5 +181,3 @@ def map_view(request, *args, **kwargs):
                 'any_match_profiles': any_match_profiles
             }
             return render(request, 'core/map.html', context)
-
-
