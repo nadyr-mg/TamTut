@@ -1,36 +1,36 @@
-from itertools import chain
-
-from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect, reverse
+from django.contrib.auth import authenticate, login
 from django.core.paginator import Paginator
 from django.views.generic import ListView
+from django.contrib.auth.models import User
+from django.http import Http404
 
-from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, FollowButtonForm, \
-    CreatePostForm
-from core.models import Profile, UserFeed, Followers
+from itertools import chain
+
+from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, MessageForm, \
+    FollowButtonForm, CreatePostForm
+from core.models import Profile, Hobby, Message
 
 
+@login_required(login_url='login')
 def home(request):
-    if request.user.is_anonymous:
-        return redirect('login')
-    else:
-        following_profiles = request.user.profile.following.all()
-        all_posts = UserFeed.objects.all()
-        followers_feed = None
-        for profile in following_profiles:
-            if followers_feed is not None:
-                followers_feed = list(chain(followers_feed, all_posts.filter(user_profile_posted=profile.user.profile)))
-            else:
-                followers_feed = all_posts.filter(user_profile_posted=profile.user.profile)
-        if followers_feed:
-            followers_feed = sorted(followers_feed, key=lambda x: x.date_posted, reverse=True)
-            followers_feed = Paginator(followers_feed, 20)
-            page = request.GET.get('page')
-            followers_feed = followers_feed.get_page(page)
-        context = {
-            'followers_feed': followers_feed
-        }
-        return render(request, 'core/home.html', context)
+    following_profiles = request.user.profile.following.all()
+    all_posts = UserFeed.objects.all()
+    followers_feed = None
+    for profile in following_profiles:
+        if followers_feed is not None:
+            followers_feed = list(chain(followers_feed, all_posts.filter(user_profile_posted=profile.user.profile)))
+        else:
+            followers_feed = all_posts.filter(user_profile_posted=profile.user.profile)
+    if followers_feed:
+        followers_feed = sorted(followers_feed, key=lambda x: x.date_posted, reverse=True)
+        followers_feed = Paginator(followers_feed, 20)
+        page = request.GET.get('page')
+        followers_feed = followers_feed.get_page(page)
+    context = {
+        'followers_feed': followers_feed
+    }
+    return render(request, 'core/home.html', context)
 
 
 def register(request):
@@ -54,7 +54,12 @@ def register(request):
 
 
 def profile(request, pk):
-    prof = Profile.objects.get(id=pk)
+    try:
+        profile_user = User.objects.get(id=pk)
+    except User.DoesNotExist:
+        raise Http404("Page doesn't exist")
+    prof = Profile.objects.get(user=profile_user)
+
     if request.method == 'GET':
         create_post_form = CreatePostForm()
         hobbies = prof.hobby.all()
@@ -96,23 +101,6 @@ def profile(request, pk):
             return redirect('profile', pk=prof.pk)
         return redirect('profile', pk=prof.pk)
 
-
-class ProfileFollowersView(ListView):
-    template_name = 'core/profile_followers_page.html'
-    paginate_by = 50
-
-    def get_queryset(self):
-        return Profile.objects.filter(following__user=Profile.objects.get(pk=self.kwargs['pk']).user)
-
-
-class ProfileFollowingView(ListView):
-    template_name = 'core/profile_following_page.html'
-    paginate_by = 50
-
-    def get_queryset(self):
-        return Profile.objects.get(pk=self.kwargs['pk']).following.all()
-
-
 def edit_profile(request):
     if request.method == 'POST':
         u_form = EditUserInfo(request.POST, instance=request.user)
@@ -131,7 +119,9 @@ def edit_profile(request):
                 logged_user_profile.latitude = lat
                 logged_user_profile.longitude = long
                 logged_user_profile.save()
-                return redirect(reverse('edit_profile'))
+                return redirect(reverse('profile', args=[request.user.id]))
+
+
     else:
         u_form = EditUserInfo(instance=request.user)
         p_form = EditProfileInfo(instance=request.user.profile)
@@ -171,3 +161,56 @@ def map_view(request, *args, **kwargs):
                 'any_match_profiles': any_match_profiles
             }
             return render(request, 'core/map.html', context)
+
+@login_required(login_url='login')
+def chat(request):
+    all_msgs = Message.objects.filter(Q(sender=request.user) | Q(receiver=request.user)).order_by('date_sent')
+    interlocutors = []
+    for msg in all_msgs:
+        if msg.sender == request.user:
+            interlocutor = msg.receiver
+        else:
+            interlocutor = msg.sender
+
+        if interlocutor not in interlocutors:
+            interlocutors.append(interlocutor)
+
+    context = {'interlocutors': interlocutors}
+    return render(request, 'core/chat.html', context)
+
+
+@login_required(login_url='login')
+def chat_by_user(request, chat_username):
+    if chat_username == request.user.username:
+        return redirect(reverse('chat'))
+
+    try:
+        chat_user = User.objects.get(username=chat_username)
+    except ObjectDoesNotExist:
+        raise Http404("User doesn't exist")
+
+    if request.method == 'POST':
+        msg_form = MessageForm(request.POST)
+        if msg_form.is_valid():
+            msg_text = msg_form.cleaned_data['msg_text']
+            Message.objects.create(receiver=chat_user, sender=request.user, msg_text=msg_text)
+            return redirect(reverse('chat_by_user', args=[chat_username]))
+    else:
+        msg_form = MessageForm()
+
+    all_msgs = Message.objects.filter(Q(sender=request.user) | Q(receiver=request.user)).order_by('date_sent')
+    interlocutors = []
+    for msg in all_msgs:
+        if msg.sender == request.user:
+            interlocutor = msg.receiver
+        else:
+            interlocutor = msg.sender
+
+        if interlocutor not in interlocutors:
+            interlocutors.append(interlocutor)
+
+    msgs_by_user = all_msgs.filter(Q(sender=chat_user) | Q(receiver=chat_user)).order_by('date_sent')
+    context = {'msg_form': msg_form, 'new_all_msgs': msgs_by_user, 'chat_user': chat_user,
+               'chat_username': chat_username, 'interlocutors': interlocutors}
+    return render(request, 'core/chat.html', context)
+

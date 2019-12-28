@@ -51,6 +51,8 @@
             {% endfor %}
             {% if  user.profile.id == prof.id %}
                 <h3><a href="{% url 'edit_profile' %}">Edit Profile</a></h3>
+            {% else %}
+                <p><a href="{% url 'chat_by_user' prof.user.username %}">Message</a></p>
             {% endif %}
         </ul>
         <br>

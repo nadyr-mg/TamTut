@@ -11,5 +11,8 @@ urlpatterns = [
     path('profile/<int:pk>/followers/', views.ProfileFollowersView.as_view(), name='profile_followers'),
     path('profile/<int:pk>/following/', views.ProfileFollowingView.as_view(), name='profile_following'),
     path('profile/edit/', views.edit_profile, name='edit_profile'),
+    path('hobby_page/', views.hobby_page, name='hobby_page'),
+    path('chat/', views.chat, name='chat'),
+    path('chat/<str:chat_username>/', views.chat_by_user, name='chat_by_user'),
     path('map/', views.map_view, name='map_page'),
 ]

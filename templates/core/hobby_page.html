@@ -14,14 +14,18 @@
     {% if profiles %}
         <h3>Full match results:</h3>
         {% for profile in profiles %}
-            <div><a href="{% url 'profile' profile.id %}">{{ profile }}</a></div>
+            {% if user.profile != profile %}
+                <div><a href="{% url 'profile' profile.user.id %}">{{ profile }}</a></div>
+            {% endif %}
         {% endfor %}
     {% endif %}
 
     {% if profiles2 %}
         <h3>Any match results:</h3>
         {% for profile2 in profiles2 %}
-            <div><a href="{% url 'profile' profile2.id %}">{{ profile2 }}</a></div>
+            {% if user.profile != profile2 %}
+                <div><a href="{% url 'profile' profile2.user.id %}">{{ profile2 }}</a></div>
+            {% endif %}
         {% endfor %}
     {% endif %}
 
