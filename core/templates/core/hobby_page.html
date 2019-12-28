@@ -4,7 +4,7 @@
 
     Hobby page
     <ul>
-        <form method="post">
+        <form method="post" class="card-body">
             {% csrf_token %}
             <p>{{ hobbies_form.hobby }}</p>
             <button type="submit">submit</button>

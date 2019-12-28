@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from core.models import Profile, Message
+from core.models import Profile
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -33,7 +33,5 @@ class HobbyList(forms.ModelForm):
         fields = ('hobby',)
 
 
-class MessageForm(forms.ModelForm):
-    class Meta:
-        model = Message
-        fields = ('receiver', 'msg_text',)
+class CoorsForm(forms.Form):
+    coors = forms.CharField(max_length=300, required=False, label='Координаты')
