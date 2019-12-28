@@ -5,7 +5,7 @@
     <body>
     {% for item in object_list %}
         <h3><a href="{% url 'profile' item.user.profile.pk %}">{{ item.user.username }}</a></h3>
-        <img src="{{ item.user.profile.image.url }}">
+        <img src="{{ item.user.profile.image.url }}" alt="Profile image" style="width:90px;height:50px;">
     {% endfor %}
     </body>
     {% if is_paginated %}
