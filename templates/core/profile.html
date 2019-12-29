@@ -72,11 +72,44 @@
                 <ul>
                     <p style="text-align:-webkit-right;">{{ post.date_posted }}</p>
                     <p style="text-align:-webkit-right;">{{ post.text }}</p>
+                    {% if request.user.profile not in post.liked_by.all %}
+                        {% if post.liked_by.all|length > 0 %}
+                            <p style="text-align:-webkit-right;"> {{ post.liked_by.all|length }}
+                                <a href="{{ post.like_post }}">❤
+                                    <i class="fas fa-shopping-cart ml-1"></i>
+                                </a>
+                            </p>
+                        {% else %}
+                            <p style="text-align:-webkit-right;">
+                                <a href="{{ post.like_post }}">❤
+                                    <i class="fas fa-shopping-cart ml-1"></i>
+                                </a>
+                            </p>
+                        {% endif %}
+
+                    {% else %}
+                        {% if post.liked_by.all|length > 0 %}
+                            <p style="text-align:-webkit-right;"> {{ post.liked_by.all|length }}
+                                <a href="{{ post.dislike_post }}">💔
+                                    <i class="fas fa-shopping-cart ml-1"></i>
+                                </a>
+                            </p>
+                        {% else %}
+                            <p style="text-align:-webkit-right;">
+                                <a href="{{ post.dislike_post }}">💔
+                                    <i class="fas fa-shopping-cart ml-1"></i>
+                                </a>
+                            </p>
+                        {% endif %}
+
+                    {% endif %}
                 </ul>
             {% endfor %}
         </tr>
         <div class="pagination" style="text-align:-webkit-right;">
     <span class="step-links">
+
+    <br>
         {% if user_feed.has_previous %}
             <a href="?page=1">&laquo; first</a>
             <a href="?page={{ user_feed.previous_page_number }}">previous</a>

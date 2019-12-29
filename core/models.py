@@ -1,6 +1,7 @@
 from PIL import Image
 from django.db import models
 from django.contrib.auth.models import User
+from django.shortcuts import reverse
 
 
 class Hobby(models.Model):
@@ -54,6 +55,18 @@ class UserFeed(models.Model):
     user_profile_posted = models.ForeignKey(Profile, default=None, on_delete=models.CASCADE)
     text = models.CharField(max_length=500)
     date_posted = models.DateTimeField(auto_now_add=True)
+
+    liked_by = models.ManyToManyField(Profile, related_name="liked_by")
+
+    def like_post(self):
+        return reverse('like_post', kwargs={
+            'pk': self.pk
+        })
+
+    def dislike_post(self):
+        return reverse('dislike_post', kwargs={
+            'pk': self.pk
+        })
 
     def __str__(self):
         return f'By {self.user_profile_posted.user.username} - {self.text[:10]}'

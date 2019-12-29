@@ -72,7 +72,7 @@ WSGI_APPLICATION = 'TamTut.wsgi.application'
 #         'PORT': '5432',
 #     }
 # }
-#
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',

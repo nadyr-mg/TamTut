@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 from django.views.generic import ListView
 from django.contrib.auth.models import User
 from django.http import Http404
+from django.http import HttpResponseRedirect
 
 from itertools import chain
 
@@ -17,23 +18,38 @@ from core.models import Profile, Hobby, Message, UserFeed
 
 @login_required(login_url='login')
 def home(request):
-    following_profiles = request.user.profile.following.all()
-    all_posts = UserFeed.objects.all()
-    followers_feed = None
-    for profile in following_profiles:
-        if followers_feed is not None:
-            followers_feed = list(chain(followers_feed, all_posts.filter(user_profile_posted=profile.user.profile)))
-        else:
-            followers_feed = all_posts.filter(user_profile_posted=profile.user.profile)
-    if followers_feed:
-        followers_feed = sorted(followers_feed, key=lambda x: x.date_posted, reverse=True)
-        followers_feed = Paginator(followers_feed, 20)
-        page = request.GET.get('page')
-        followers_feed = followers_feed.get_page(page)
-    context = {
-        'followers_feed': followers_feed
-    }
-    return render(request, 'core/home.html', context)
+    if request.method == 'GET':
+        following_profiles = request.user.profile.following.all()
+        all_posts = UserFeed.objects.all()
+        followers_feed = None
+        like_post = FollowButtonForm()
+        for profile in following_profiles:
+            if followers_feed is not None:
+                followers_feed = list(chain(followers_feed, all_posts.filter(user_profile_posted=profile.user.profile)))
+            else:
+                followers_feed = all_posts.filter(user_profile_posted=profile.user.profile)
+        if followers_feed:
+            followers_feed = sorted(followers_feed, key=lambda x: x.date_posted, reverse=True)
+            followers_feed = Paginator(followers_feed, 20)
+            page = request.GET.get('page')
+            followers_feed = followers_feed.get_page(page)
+        context = {
+            'followers_feed': followers_feed,
+            'like_post': like_post
+        }
+        return render(request, 'core/home.html', context)
+
+
+def like_post(request, pk):
+    post = UserFeed.objects.get(pk=pk)
+    post.liked_by.add(request.user.profile)
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+
+
+def dislike_post(request, pk):
+    post = UserFeed.objects.get(pk=pk)
+    post.liked_by.remove(request.user.profile)
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
 
 def register(request):

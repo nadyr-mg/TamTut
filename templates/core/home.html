@@ -11,9 +11,24 @@
 
     {% for post in followers_feed %}
         <ul>
-            <img src="{{ post.user_profile_posted.image.url }}" alt="Profile image" style="width:60px;height:35px;"><a href="{% url 'profile' post.user_profile_posted.pk %}"
-               style="text-align:justify">{{ post.user_profile_posted.user.username }} </a>| {{ post.date_posted }}
-            <p style="text-align:justify">{{ post.text }}</p>
+            <img src="{{ post.user_profile_posted.image.url }}" alt="Profile image" style="width:40px;height:40px;">
+            <a href="{% url 'profile' post.user_profile_posted.pk %}"
+               style="text-align:justify">{{ post.user_profile_posted.user.username }} </a>
+            | {{ post.date_posted }} <p style="text-align:justify">{{ post.text }}</p>
+            {% if request.user.profile not in post.liked_by.all %}
+                {% if post.liked_by.all|length > 0 %}
+                    {{ post.liked_by.all|length }}
+                {% endif %}
+                <a href="{{ post.like_post }}" class="btn btn-primary btn-md my-0 p">❤
+                    <i class="fas fa-shopping-cart ml-1"></i>
+                </a>
+            {% else %}
+                {% if post.liked_by.all|length > 0 %}
+                    {{ post.liked_by.all|length }}
+                {% endif %}                <a href="{{ post.dislike_post }}" class="btn btn-primary btn-md my-0 p">💔
+                <i class="fas fa-shopping-cart ml-1"></i>
+            </a>
+            {% endif %}
         </ul>
     {% endfor %}
     {% if followers_feed is not None %}

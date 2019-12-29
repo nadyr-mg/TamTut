@@ -14,4 +14,6 @@ urlpatterns = [
     path('chat/', views.chat, name='chat'),
     path('chat/<str:chat_username>/', views.chat_by_user, name='chat_by_user'),
     path('map/', views.map_view, name='map_page'),
+    path('likepost/<int:pk>/', views.like_post, name='like_post'),
+    path('dislikepost/<int:pk>/', views.dislike_post, name='dislike_post'),
 ]
