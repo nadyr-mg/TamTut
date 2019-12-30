@@ -6,10 +6,52 @@
     HOME PAGE
 
     <p>
-        <a href="{% url 'map_page' %}">Map</a>
-    </p>
+        <a href="{% url 'map_page' %}">Map </a>
 
-    {% for post in followers_feed %}
+    </p>
+    <form method="post">
+        {% csrf_token %}
+        <p>        {{ feed_type.global_feed.as_hidden }}
+
+        </p>
+        <button type="submit">Global</button>
+    </form>
+    <form method="post">
+        {% csrf_token %}
+        <p>        {{ feed_type.followers_feed.as_hidden }}
+        </p>
+        <button type="submit">Followers</button>
+    </form>
+
+    {% if global_feed is True %}
+
+        <form method="post">
+            {% csrf_token %}
+            {{ sort_global_feed.new.as_hidden }}
+            {{ feed_type.global_feed.as_hidden }}
+            <button type="submit">New</button>
+        </form>
+        <form method="post">
+            {% csrf_token %}
+            {{ sort_global_feed.best.as_hidden }}
+            {{ feed_type.global_feed.as_hidden }}
+
+            <button type="submit">Best</button>
+        </form>
+        <form method="post">
+            {% csrf_token %}
+            {{ sort_global_feed.hot.as_hidden }}
+            {{ feed_type.global_feed.as_hidden }}
+
+            <button type="submit">Hot</button>
+        </form>
+    {% endif %}
+
+
+
+
+
+    {% for post in feed %}
         <ul>
             <img src="{{ post.user_profile_posted.image.url }}" alt="Profile image" style="width:40px;height:40px;">
             <a href="{% url 'profile' post.user_profile_posted.pk %}"
@@ -31,19 +73,22 @@
             {% endif %}
         </ul>
     {% endfor %}
-    {% if followers_feed is not None %}
-        {% if followers_feed.has_previous %}
-            <a href="?page=1">&laquo; first</a>
-            <a href="?page={{ followers_feed.previous_page_number }}">previous</a>
-        {% endif %}
+    {% if feed.has_previous %}
+        {% if feed is not None %}
+            {% if feed.has_previous %}
+                <a href="?page=1">&laquo; first</a>
+                <a href="?page={{ feed.previous_page_number }}">previous</a>
+            {% endif %}
 
-        <span class="current">
-                Page {{ followers_feed.number }} of {{ followers_feed.paginator.num_pages }}.
+            <span class="current">
+                Page {{ feed.number }} of {{ feed.paginator.num_pages }}.
             </span>
 
-        {% if followers_feed.has_next %}
-            <a href="?page={{ followers_feed.next_page_number }}">next</a>
-            <a href="?page={{ followers_feed.paginator.num_pages }}">last &raquo;</a>
+            {% if feed.has_next %}
+                <a href="?page={{ feed.next_page_number }}">next</a>
+                <a href="?page={{ feed.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
         {% endif %}
     {% endif %}
+
 {% endblock content %}

@@ -1,3 +1,5 @@
+import datetime
+
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
@@ -12,17 +14,19 @@ from django.http import HttpResponseRedirect
 from itertools import chain
 
 from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, MessageForm, \
-    FollowButtonForm, CreatePostForm
+    FollowButtonForm, CreatePostForm, FeedTypeForm, SortGlobalFeedForm
 from core.models import Profile, Hobby, Message, UserFeed
 
 
 @login_required(login_url='login')
 def home(request):
+    feed_type = FeedTypeForm()
+    like_post = FollowButtonForm()
+    all_posts = UserFeed.objects.all()
+    following_profiles = request.user.profile.following.all()
+    followers_feed = None
     if request.method == 'GET':
-        following_profiles = request.user.profile.following.all()
-        all_posts = UserFeed.objects.all()
-        followers_feed = None
-        like_post = FollowButtonForm()
+        feed = followers_feed
         for profile in following_profiles:
             if followers_feed is not None:
                 followers_feed = list(chain(followers_feed, all_posts.filter(user_profile_posted=profile.user.profile)))
@@ -33,11 +37,63 @@ def home(request):
             followers_feed = Paginator(followers_feed, 20)
             page = request.GET.get('page')
             followers_feed = followers_feed.get_page(page)
+            feed = followers_feed
         context = {
-            'followers_feed': followers_feed,
-            'like_post': like_post
+            'feed': feed,
+            'like_post': like_post,
+            'feed_type': feed_type
         }
         return render(request, 'core/home.html', context)
+    else:
+        feed_type_post = FeedTypeForm(request.POST or None)
+        if feed_type_post.is_valid():
+            global_feed_true = feed_type_post.cleaned_data['global_feed']
+            followers_feed_true = feed_type_post.cleaned_data['followers_feed']
+            feed = None
+            if followers_feed_true:
+                for profile in following_profiles:
+                    if followers_feed is not None:
+                        followers_feed = list(
+                            chain(followers_feed, all_posts.filter(user_profile_posted=profile.user.profile)))
+                    else:
+                        followers_feed = all_posts.filter(user_profile_posted=profile.user.profile)
+                if followers_feed:
+                    followers_feed = sorted(followers_feed, key=lambda x: x.date_posted, reverse=True)
+                    followers_feed = Paginator(followers_feed, 20)
+                    page = request.GET.get('page')
+                    followers_feed = followers_feed.get_page(page)
+                    feed = followers_feed
+                context = {
+                    'feed': feed,
+                    'like_post': like_post,
+                    'feed_type': feed_type
+                }
+                return render(request, 'core/home.html', context)
+            if global_feed_true:
+                sort_global_feed = SortGlobalFeedForm(request.POST or None)
+                sort_global_feed_get = SortGlobalFeedForm()
+                if sort_global_feed.is_valid():
+                    sort_global_feed_best = sort_global_feed.cleaned_data['best']
+                    sort_global_feed_hot = sort_global_feed.cleaned_data['hot']
+                    global_feed = sorted(all_posts, key=lambda x: x.date_posted, reverse=True)
+                    if sort_global_feed_best:
+                        global_feed = sorted(all_posts, key=lambda x: len(list(x.liked_by.all())), reverse=True)
+                    if sort_global_feed_hot:
+                        date_from = datetime.datetime.now() - datetime.timedelta(days=1)
+                        global_feed = sorted(all_posts.filter(date_posted__gte=date_from), key=lambda x: len(list(x.liked_by.all())), reverse=True)
+
+                else:
+                    global_feed = sorted(all_posts, key=lambda x: x.date_posted, reverse=True)
+                context = {
+                    'feed': global_feed,
+                    'like_post': like_post,
+                    'feed_type': feed_type,
+                    'global_feed': True,
+                    'sort_global_feed': sort_global_feed_get
+                }
+                return render(request, 'core/home.html', context)
+
+        return redirect('home')
 
 
 def like_post(request, pk):
