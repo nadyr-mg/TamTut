@@ -11,13 +11,6 @@ class Hobby(models.Model):
         return self.name
 
 
-class Followers(models.Model):
-    user = models.OneToOneField(User, null=True, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return self.user.username
-
-
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     hobby = models.ManyToManyField(Hobby)
@@ -26,8 +19,7 @@ class Profile(models.Model):
     latitude = models.FloatField(null=True, default=None, blank=True)
     longitude = models.FloatField(null=True, default=None, blank=True)
 
-    following = models.ManyToManyField(Followers, related_name="following")
-    followed = models.OneToOneField(Followers, related_name="followed", null=True, on_delete=models.CASCADE)
+    follows = models.ManyToManyField("self", related_name="followed_by", symmetrical=False)
 
     def __str__(self):
         return f'{self.user.username} Profile'
@@ -52,7 +44,8 @@ class Profile(models.Model):
 
 
 class UserFeed(models.Model):
-    user_profile_posted = models.ForeignKey(Profile, default=None, on_delete=models.CASCADE)
+    author = models.ForeignKey(Profile, default=None, related_name='posts', on_delete=models.CASCADE,
+                               verbose_name="author's profile")
     text = models.CharField(max_length=500)
     date_posted = models.DateTimeField(auto_now_add=True)
 
@@ -69,12 +62,12 @@ class UserFeed(models.Model):
         })
 
     def __str__(self):
-        return f'By {self.user_profile_posted.user.username} - {self.text[:10]}'
+        return f'By {self.author.user.username} - {self.text[:10]}'
 
 
 class Message(models.Model):
-    sender = models.ForeignKey(User, related_name="sender", on_delete=models.CASCADE)
-    receiver = models.ForeignKey(User, related_name="receiver", on_delete=models.CASCADE)
+    sender = models.ForeignKey(User, related_name="sent_by", on_delete=models.CASCADE)
+    receiver = models.ForeignKey(User, related_name="received_by", on_delete=models.CASCADE)
     msg_text = models.TextField(max_length=500, blank=False)
     date_sent = models.DateTimeField(auto_now_add=True)
 

@@ -1,21 +1,20 @@
 import datetime
+from itertools import chain
 
-from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Q
-from django.shortcuts import render, redirect, reverse
 from django.contrib.auth import authenticate, login
-from django.core.paginator import Paginator
-from django.views.generic import ListView
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import Http404
 from django.http import HttpResponseRedirect
-
-from itertools import chain
+from django.shortcuts import render, redirect, reverse
+from django.views.generic import ListView
 
 from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, MessageForm, \
     FollowButtonForm, CreatePostForm, FeedTypeForm, SortGlobalFeedForm
-from core.models import Profile, Hobby, Message, UserFeed
+from core.models import Profile, Message, UserFeed
 
 
 @login_required(login_url='login')
@@ -23,21 +22,10 @@ def home(request):
     feed_type = FeedTypeForm()
     like_post = FollowButtonForm()
     all_posts = UserFeed.objects.all()
-    following_profiles = request.user.profile.following.all()
-    followers_feed = None
+    following_profiles = request.user.profile.follows.all()
+
     if request.method == 'GET':
-        feed = followers_feed
-        for profile in following_profiles:
-            if followers_feed is not None:
-                followers_feed = list(chain(followers_feed, all_posts.filter(user_profile_posted=profile.user.profile)))
-            else:
-                followers_feed = all_posts.filter(user_profile_posted=profile.user.profile)
-        if followers_feed:
-            followers_feed = sorted(followers_feed, key=lambda x: x.date_posted, reverse=True)
-            followers_feed = Paginator(followers_feed, 20)
-            page = request.GET.get('page')
-            followers_feed = followers_feed.get_page(page)
-            feed = followers_feed
+        feed = get_followers_feed(request, following_profiles, all_posts)
         context = {
             'feed': feed,
             'like_post': like_post,
@@ -49,20 +37,8 @@ def home(request):
         if feed_type_post.is_valid():
             global_feed_true = feed_type_post.cleaned_data['global_feed']
             followers_feed_true = feed_type_post.cleaned_data['followers_feed']
-            feed = None
             if followers_feed_true:
-                for profile in following_profiles:
-                    if followers_feed is not None:
-                        followers_feed = list(
-                            chain(followers_feed, all_posts.filter(user_profile_posted=profile.user.profile)))
-                    else:
-                        followers_feed = all_posts.filter(user_profile_posted=profile.user.profile)
-                if followers_feed:
-                    followers_feed = sorted(followers_feed, key=lambda x: x.date_posted, reverse=True)
-                    followers_feed = Paginator(followers_feed, 20)
-                    page = request.GET.get('page')
-                    followers_feed = followers_feed.get_page(page)
-                    feed = followers_feed
+                feed = get_followers_feed(request, following_profiles, all_posts)
                 context = {
                     'feed': feed,
                     'like_post': like_post,
@@ -80,7 +56,8 @@ def home(request):
                         global_feed = sorted(all_posts, key=lambda x: len(list(x.liked_by.all())), reverse=True)
                     if sort_global_feed_hot:
                         date_from = datetime.datetime.now() - datetime.timedelta(days=1)
-                        global_feed = sorted(all_posts.filter(date_posted__gte=date_from), key=lambda x: len(list(x.liked_by.all())), reverse=True)
+                        global_feed = sorted(all_posts.filter(date_posted__gte=date_from),
+                                             key=lambda x: len(list(x.liked_by.all())), reverse=True)
 
                 else:
                     global_feed = sorted(all_posts, key=lambda x: x.date_posted, reverse=True)
@@ -94,6 +71,20 @@ def home(request):
                 return render(request, 'core/home.html', context)
 
         return redirect('home')
+
+
+def get_followers_feed(request, following_profiles, all_posts, followers_feed=None):
+    for profile in following_profiles:
+        if followers_feed is None:
+            followers_feed = all_posts.filter(author=profile)
+        else:
+            followers_feed = list(chain(followers_feed, profile.posts.all()))
+    if followers_feed:
+        followers_feed = sorted(followers_feed, key=lambda x: x.date_posted, reverse=True)
+        followers_feed = Paginator(followers_feed, 20)
+        page = request.GET.get('page')
+        followers_feed = followers_feed.get_page(page)
+    return followers_feed
 
 
 def like_post(request, pk):
@@ -133,7 +124,7 @@ class ProfileFollowersView(ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        return Profile.objects.filter(following__user=Profile.objects.get(pk=self.kwargs['pk']).user)
+        return Profile.objects.get(pk=self.kwargs['pk']).followed_by.all()
 
 
 class ProfileFollowingView(ListView):
@@ -141,7 +132,7 @@ class ProfileFollowingView(ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        return Profile.objects.get(pk=self.kwargs['pk']).following.all()
+        return Profile.objects.get(pk=self.kwargs['pk']).follows.all()
 
 
 def profile(request, pk):
@@ -149,23 +140,21 @@ def profile(request, pk):
         profile_user = User.objects.get(id=pk)
     except User.DoesNotExist:
         raise Http404("Page doesn't exist")
-    prof = Profile.objects.get(user=profile_user)
+    target_profile = Profile.objects.get(user=profile_user)
 
     if request.method == 'GET':
         create_post_form = CreatePostForm()
-        hobbies = prof.hobby.all()
-
-        followed_by = Profile.objects.filter(following__user=prof.user)
-
         follow_button_form = FollowButtonForm()
+        hobbies = target_profile.hobby.all()
+        followed_by = target_profile.followed_by.all()
 
-        user_feed = prof.userfeed_set.all()
+        user_feed = target_profile.posts.all()
         user_feed = Paginator(user_feed, 8)
         page = request.GET.get('page')
         user_feed = user_feed.get_page(page)
         context = {
             'hobbies': hobbies,
-            'prof': prof,
+            'prof': target_profile,
             'create_post_form': create_post_form,
             'user_feed': user_feed,
             'follow_button_form': follow_button_form,
@@ -179,18 +168,19 @@ def profile(request, pk):
             following = follow_button_form.cleaned_data['follow']
             if following is True:
                 cur_profile = request.user.profile
-                prof_followed = prof.followed
-                if prof.followed not in cur_profile.following.all():
-                    cur_profile.following.add(prof_followed)
+                if target_profile in cur_profile.follows.all():
+                    cur_profile.follows.remove(target_profile)
                 else:
-                    cur_profile.following.remove(prof_followed)
-                return redirect('profile', pk=prof.pk)
+                    cur_profile.follows.add(target_profile)
+
+                return redirect('profile', pk=target_profile.pk)
 
         if create_post_form.is_valid():
             post_text = create_post_form.cleaned_data['text']
-            UserFeed.objects.create(user_profile_posted=request.user.profile, text=post_text)
-            return redirect('profile', pk=prof.pk)
-        return redirect('profile', pk=prof.pk)
+            UserFeed.objects.create(author=request.user.profile, text=post_text)
+            return redirect('profile', pk=target_profile.pk)
+
+        return redirect('profile', pk=target_profile.pk)
 
 
 def edit_profile(request):
