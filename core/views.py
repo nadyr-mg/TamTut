@@ -16,6 +16,7 @@ from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, Hobb
     FollowButtonForm, CreatePostForm, FeedTypeForm, SortGlobalFeedForm
 from core.models import Profile, Message, Post
 
+
 POSTS_ON_PROFILE_PAGE = 10
 
 
@@ -64,7 +65,7 @@ def home(request):
                 context = {
                     'feed': global_feed,
                     'feed_type': feed_type,
-                    
+
                     'global_feed': True,
                     'sort_global_feed': SortGlobalFeedForm()
                 }
