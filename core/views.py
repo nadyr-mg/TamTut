@@ -45,22 +45,14 @@ def home(request):
                     'feed_type': feed_type
                 }
                 return render(request, 'core/home.html', context)
+
             if global_feed_true:
                 sort_global_feed = SortGlobalFeedForm(request.POST or None)
                 sort_global_feed_get = SortGlobalFeedForm()
+                global_feed = sorted(all_posts, key=lambda x: x.date_posted, reverse=True)
                 if sort_global_feed.is_valid():
-                    sort_global_feed_best = sort_global_feed.cleaned_data['best']
-                    sort_global_feed_hot = sort_global_feed.cleaned_data['hot']
-                    global_feed = sorted(all_posts, key=lambda x: x.date_posted, reverse=True)
-                    if sort_global_feed_best:
-                        global_feed = sorted(all_posts, key=lambda x: len(list(x.liked_by.all())), reverse=True)
-                    if sort_global_feed_hot:
-                        date_from = datetime.datetime.now() - datetime.timedelta(days=1)
-                        global_feed = sorted(all_posts.filter(date_posted__gte=date_from),
-                                             key=lambda x: len(list(x.liked_by.all())), reverse=True)
-
-                else:
-                    global_feed = sorted(all_posts, key=lambda x: x.date_posted, reverse=True)
+                    global_feed = sort_global_feed_func(sort_global_feed, all_posts)
+                global_feed = paginate(request, global_feed, 15)
                 context = {
                     'feed': global_feed,
                     'like_post': like_post,
@@ -74,29 +66,29 @@ def home(request):
 
 
 def get_followers_feed(request, following_profiles, all_posts, followers_feed=None):
-    for profile in following_profiles:
+    for prof in following_profiles:
         if followers_feed is None:
-            followers_feed = all_posts.filter(author=profile)
+            followers_feed = all_posts.filter(author=prof)
         else:
-            followers_feed = list(chain(followers_feed, profile.posts.all()))
+            followers_feed = list(chain(followers_feed, prof.posts.all()))
     if followers_feed:
         followers_feed = sorted(followers_feed, key=lambda x: x.date_posted, reverse=True)
-        followers_feed = Paginator(followers_feed, 20)
-        page = request.GET.get('page')
-        followers_feed = followers_feed.get_page(page)
+        followers_feed = paginate(request, followers_feed, 20)
     return followers_feed
 
 
-def like_post(request, pk):
-    post = UserFeed.objects.get(pk=pk)
-    post.liked_by.add(request.user.profile)
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+def sort_global_feed_func(sort_global_feed, all_posts):
+    sort_global_feed_best = sort_global_feed.cleaned_data['best']
+    sort_global_feed_hot = sort_global_feed.cleaned_data['hot']
+    global_feed = sorted(all_posts, key=lambda x: x.date_posted, reverse=True)
+    if sort_global_feed_best:
+        global_feed = sorted(all_posts, key=lambda x: len(list(x.liked_by.all())), reverse=True)
+    if sort_global_feed_hot:
+        date_from = datetime.datetime.now() - datetime.timedelta(days=1)
+        global_feed = sorted(all_posts.filter(date_posted__gte=date_from),
+                             key=lambda x: len(list(x.liked_by.all())), reverse=True)
 
-
-def dislike_post(request, pk):
-    post = UserFeed.objects.get(pk=pk)
-    post.liked_by.remove(request.user.profile)
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+    return global_feed
 
 
 def register(request):
@@ -149,9 +141,7 @@ def profile(request, pk):
         followed_by = target_profile.followed_by.all()
 
         user_feed = target_profile.posts.all()
-        user_feed = Paginator(user_feed, 8)
-        page = request.GET.get('page')
-        user_feed = user_feed.get_page(page)
+        user_feed = paginate(request, user_feed, 10)
         context = {
             'hobbies': hobbies,
             'prof': target_profile,
@@ -181,6 +171,9 @@ def profile(request, pk):
             return redirect('profile', pk=target_profile.pk)
 
         return redirect('profile', pk=target_profile.pk)
+
+
+
 
 
 def edit_profile(request):
@@ -296,3 +289,21 @@ def chat_by_user(request, chat_username):
     context = {'msg_form': msg_form, 'new_all_msgs': msgs_by_user, 'chat_user': chat_user,
                'chat_username': chat_username, 'interlocutors': interlocutors}
     return render(request, 'core/chat.html', context)
+
+
+def like_post(request, pk):
+    post = UserFeed.objects.get(pk=pk)
+    post.liked_by.add(request.user.profile)
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+
+
+def dislike_post(request, pk):
+    post = UserFeed.objects.get(pk=pk)
+    post.liked_by.remove(request.user.profile)
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+
+def paginate(request, user_feed, num_of_elements):
+    user_feed = Paginator(user_feed, num_of_elements)
+    page = request.GET.get('page')
+    user_feed = user_feed.get_page(page)
+    return user_feed

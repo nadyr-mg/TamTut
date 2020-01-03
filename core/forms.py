@@ -27,6 +27,10 @@ class EditUserInfo(forms.ModelForm):
         fields = ('first_name', 'last_name', 'email')
 
 
+class CoorsForm(forms.Form):
+    coors = forms.CharField(max_length=300, required=False, label='Координаты')
+
+
 class HobbyList(forms.ModelForm):
     class Meta:
         model = Profile
@@ -43,10 +47,6 @@ class MessageForm(forms.ModelForm):
         widgets = {
             'msg_text': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Напишите сообщение...', }),
         }
-
-
-class CoorsForm(forms.Form):
-    coors = forms.CharField(max_length=300, required=False, label='Координаты')
 
 
 class FollowButtonForm(forms.Form):
