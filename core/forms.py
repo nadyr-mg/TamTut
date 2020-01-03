@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from core.models import Profile, Message, UserFeed
+from core.models import Profile, Message, Post
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -55,7 +55,7 @@ class FollowButtonForm(forms.Form):
 
 class CreatePostForm(forms.ModelForm):
     class Meta:
-        model = UserFeed
+        model = Post
         fields = ('text',)
         widgets = {
             'text': forms.Textarea(attrs={'rows': 3}),

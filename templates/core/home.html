@@ -48,14 +48,11 @@
     {% endif %}
 
 
-
-
-
     {% for post in feed %}
         <ul>
             <img src="{{ post.author.image.url }}" alt="Profile image" style="width:40px;height:40px;">
             <a href="{% url 'profile' post.author.pk %}"
-               style="text-align:justify">{{ post.author.user.username }} </a>
+               style="text-align:justify">{{ post.get_authors_name }} </a>
             | {{ post.date_posted }} <p style="text-align:justify">{{ post.text }}</p>
             {% if request.user.profile not in post.liked_by.all %}
                 {% if post.liked_by.all|length > 0 %}

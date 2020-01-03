@@ -18,13 +18,13 @@
                     <a> | {{ prof.follows.all|length }} following</a>
                 {% endif %}
                 {% if request.user != prof.user %}
-                    {% if prof not in request.user.profile.follows.all %}
+                    {% if prof in request.user.profile.follows.all %}
                         <form method="post">
                             {% csrf_token %}
                             <p>
                                 {{ follow_button_form.follow.as_hidden }}
                             </p>
-                            <button type="submit">Follow</button>
+                            <button type="submit">Unfollow</button>
                         </form>
                     {% else %}
                         <form method="post">
@@ -32,7 +32,7 @@
                             <p>
                                 {{ follow_button_form.follow.as_hidden }}
                             </p>
-                            <button type="submit">Unfollow</button>
+                            <button type="submit">Follow</button>
                         </form>
                     {% endif %}
                 {% endif %}
@@ -68,7 +68,7 @@
     </table>
     <table>
         <tr>
-            {% for post in user_feed %}
+            {% for post in posts %}
                 <ul>
                     <p style="text-align:-webkit-right;">{{ post.date_posted }}</p>
                     <p style="text-align:-webkit-right;">{{ post.text }}</p>
@@ -110,18 +110,18 @@
     <span class="step-links">
 
     <br>
-        {% if user_feed.has_previous %}
+        {% if posts.has_previous %}
             <a href="?page=1">&laquo; first</a>
-            <a href="?page={{ user_feed.previous_page_number }}">previous</a>
+            <a href="?page={{ posts.previous_page_number }}">previous</a>
         {% endif %}
 
         <span class="current">
-            Page {{ user_feed.number }} of {{ user_feed.paginator.num_pages }}.
+            Page {{ posts.number }} of {{ posts.paginator.num_pages }}.
         </span>
 
-        {% if user_feed.has_next %}
-            <a href="?page={{ user_feed.next_page_number }}">next</a>
-            <a href="?page={{ user_feed.paginator.num_pages }}">last &raquo;</a>
+        {% if posts.has_next %}
+            <a href="?page={{ posts.next_page_number }}">next</a>
+            <a href="?page={{ posts.paginator.num_pages }}">last &raquo;</a>
         {% endif %}
     </span>
         </div>
