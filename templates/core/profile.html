@@ -12,19 +12,19 @@
                     {{ prof.user.username }} |
                     <a>{{ followed_by|length }} followers</a>
                 {% endif %}
-                {% if prof.following.all|length > 0 %}
-                    <a href="{% url 'profile_following' prof.id %}"> | {{ prof.following.all|length }} following</a>
+                {% if prof.follows.all|length > 0 %}
+                    <a href="{% url 'profile_following' prof.id %}"> | {{ prof.follows.all|length }} following</a>
                 {% else %}
-                    <a> | {{ prof.following.all|length }} following</a>
+                    <a> | {{ prof.follows.all|length }} following</a>
                 {% endif %}
                 {% if request.user != prof.user %}
-                    {% if prof.followed not in request.user.profile.following.all %}
+                    {% if prof in request.user.profile.follows.all %}
                         <form method="post">
                             {% csrf_token %}
                             <p>
                                 {{ follow_button_form.follow.as_hidden }}
                             </p>
-                            <button type="submit">Follow</button>
+                            <button type="submit">Unfollow</button>
                         </form>
                     {% else %}
                         <form method="post">
@@ -32,7 +32,7 @@
                             <p>
                                 {{ follow_button_form.follow.as_hidden }}
                             </p>
-                            <button type="submit">Unfollow</button>
+                            <button type="submit">Follow</button>
                         </form>
                     {% endif %}
                 {% endif %}
@@ -68,27 +68,60 @@
     </table>
     <table>
         <tr>
-            {% for post in user_feed %}
+            {% for post in posts %}
                 <ul>
                     <p style="text-align:-webkit-right;">{{ post.date_posted }}</p>
                     <p style="text-align:-webkit-right;">{{ post.text }}</p>
+                    {% if request.user.profile not in post.liked_by.all %}
+                        {% if post.liked_by.all|length > 0 %}
+                            <p style="text-align:-webkit-right;"> {{ post.liked_by.all|length }}
+                                <a href="{{ post.like_post }}">❤
+                                    <i class="fas fa-shopping-cart ml-1"></i>
+                                </a>
+                            </p>
+                        {% else %}
+                            <p style="text-align:-webkit-right;">
+                                <a href="{{ post.like_post }}">❤
+                                    <i class="fas fa-shopping-cart ml-1"></i>
+                                </a>
+                            </p>
+                        {% endif %}
+
+                    {% else %}
+                        {% if post.liked_by.all|length > 0 %}
+                            <p style="text-align:-webkit-right;"> {{ post.liked_by.all|length }}
+                                <a href="{{ post.dislike_post }}">💔
+                                    <i class="fas fa-shopping-cart ml-1"></i>
+                                </a>
+                            </p>
+                        {% else %}
+                            <p style="text-align:-webkit-right;">
+                                <a href="{{ post.dislike_post }}">💔
+                                    <i class="fas fa-shopping-cart ml-1"></i>
+                                </a>
+                            </p>
+                        {% endif %}
+
+                    {% endif %}
                 </ul>
             {% endfor %}
         </tr>
         <div class="pagination" style="text-align:-webkit-right;">
     <span class="step-links">
-        {% if user_feed.has_previous %}
+
+    <br>
+        {% if posts.has_previous %}
             <a href="?page=1">&laquo; first</a>
-            <a href="?page={{ user_feed.previous_page_number }}">previous</a>
+            <a href="?page={{ posts.previous_page_number }}">previous</a>
         {% endif %}
 
         <span class="current">
-            Page {{ user_feed.number }} of {{ user_feed.paginator.num_pages }}.
+            Page {{ posts.number }} of {{ posts.paginator.num_pages }}.
         </span>
 
-        {% if user_feed.has_next %}
-            <a href="?page={{ user_feed.next_page_number }}">next</a>
-            <a href="?page={{ user_feed.paginator.num_pages }}">last &raquo;</a>
+        {% if posts.has_next %}
+            <a href="?page={{ posts.next_page_number }}">next</a>
+            <a href="?page={{ posts.paginator.num_pages }}">last &raquo;</a>
         {% endif %}
     </span>
         </div>

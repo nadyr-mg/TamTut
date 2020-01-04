@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from core.models import Profile, Message, UserFeed
+from core.models import Profile, Message, Post
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -27,6 +27,10 @@ class EditUserInfo(forms.ModelForm):
         fields = ('first_name', 'last_name', 'email')
 
 
+class CoorsForm(forms.Form):
+    coors = forms.CharField(max_length=300, required=False, label='Координаты')
+
+
 class HobbyList(forms.ModelForm):
     class Meta:
         model = Profile
@@ -45,18 +49,25 @@ class MessageForm(forms.ModelForm):
         }
 
 
-class CoorsForm(forms.Form):
-    coors = forms.CharField(max_length=300, required=False, label='Координаты')
-
-
 class FollowButtonForm(forms.Form):
     follow = forms.BooleanField(initial=True)
 
 
 class CreatePostForm(forms.ModelForm):
     class Meta:
-        model = UserFeed
+        model = Post
         fields = ('text',)
         widgets = {
             'text': forms.Textarea(attrs={'rows': 3}),
         }
+
+
+class FeedTypeForm(forms.Form):
+    global_feed = forms.BooleanField(initial=True, required=False)
+    followers_feed = forms.BooleanField(initial=True, required=False)
+
+
+class SortGlobalFeedForm(forms.Form):
+    new = forms.BooleanField(initial=True, required=False)
+    best = forms.BooleanField(initial=True, required=False)
+    hot = forms.BooleanField(initial=True, required=False)
