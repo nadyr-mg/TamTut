@@ -57,14 +57,3 @@ class CreatePostForm(forms.ModelForm):
         widgets = {
             'text': forms.Textarea(attrs={'rows': 3}),
         }
-
-
-class FeedTypeForm(forms.Form):
-    global_feed = forms.BooleanField(initial=True, required=False)
-    followers_feed = forms.BooleanField(initial=True, required=False)
-
-
-class SortGlobalFeedForm(forms.Form):
-    new = forms.BooleanField(initial=True, required=False)
-    best = forms.BooleanField(initial=True, required=False)
-    hot = forms.BooleanField(initial=True, required=False)

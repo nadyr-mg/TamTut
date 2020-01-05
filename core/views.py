@@ -8,16 +8,15 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import Http404
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, redirect, reverse, render_to_response
+from django.shortcuts import render, redirect, reverse
 from django.views.generic import ListView
 
-from core.forms import UserRegistrationForm, HobbyList, EditProfileForm, MessageForm, CreatePostForm, FeedTypeForm, \
-    SortGlobalFeedForm
+from core.forms import UserRegistrationForm, HobbyList, EditProfileForm, MessageForm, CreatePostForm
 from core.models import Profile, Message, Post, Hobby
 
 POSTS_ON_PROFILE_PAGE = 10
 POSTS_ON_HOME_PAGE = 20
-DAYS_HOT_POSTS = 7
+DAYS_HOT_POSTS = 3
 FOLLOWERS_ON_FOLLOWS_PAGE = 40
 
 
@@ -30,48 +29,47 @@ def paginate(request, objects, num_of_elements):
 
 @login_required(login_url='login')
 def home(request, *args, **kwargs):
-    feed_type = FeedTypeForm()
+    context = sorted_feed(request)
+    return render(request, 'core/home.html', context)
+
+
+def sorted_feed(request):
     following_profiles = request.user.profile.follows.all()
+    all_posts = Post.objects.all()
+    feed = get_followers_feed(request, following_profiles)
+    global_feed = False
 
-    if request.method == 'GET':
-        feed = get_followers_feed(request, following_profiles)
-        context = {
-            'feed': feed,
-            'feed_type': feed_type
-        }
-        return render(request, 'core/home.html', context)
-    else:
-        # TODO: get rid of forms, use GET arguments in urls to switch between different feed types
-        feed_type_post = FeedTypeForm(request.POST or None)
-        if feed_type_post.is_valid():
-            followers_feed_true = feed_type_post.cleaned_data['followers_feed']
-            if followers_feed_true:
-                posts = get_followers_feed(request, following_profiles)
-                context = {
-                    'feed': posts,
-                    'feed_type': feed_type
-                }
-                return render(request, 'core/home.html', context)
+    try:
+        global_new_param = request.GET['new']
+        global_new_feed = all_posts.order_by('-date_posted')
+        feed = global_new_feed
+        global_feed = True
+    except Exception:
+        pass
 
-            global_feed_true = feed_type_post.cleaned_data['global_feed']
-            if global_feed_true:
-                sort_global_feed_form = SortGlobalFeedForm(request.POST or None)
-                all_posts = Post.objects.all()
-                if sort_global_feed_form.is_valid():
-                    global_feed = sort_global_feed(request, sort_global_feed_form, all_posts)
-                else:
-                    global_feed = sorted(all_posts, key=lambda x: x.date_posted, reverse=True)
+    try:
+        global_new_param = request.GET['best']
+        global_best_feed = sorted(all_posts, key=lambda x: x.likes_amount, reverse=True)
+        feed = global_best_feed
+        global_feed = True
+    except Exception:
+        pass
 
-                context = {
-                    'feed': global_feed,
-                    'feed_type': feed_type,
-
-                    'global_feed': True,
-                    'sort_global_feed': SortGlobalFeedForm()
-                }
-                return render(request, 'core/home.html', context)
-
-        return redirect('home')
+    try:
+        global_new_param = request.GET['hot']
+        date_from = datetime.datetime.now() - datetime.timedelta(days=DAYS_HOT_POSTS)
+        hot_feed = all_posts.filter(date_posted__gte=date_from)
+        global_hot_feed = sorted(hot_feed, key=lambda x: x.likes_amount, reverse=True)
+        feed = global_hot_feed
+        global_feed = True
+    except Exception:
+        pass
+    feed = paginate(request, feed, POSTS_ON_HOME_PAGE)
+    context = {
+        'feed': feed,
+        'global_feed': global_feed,
+    }
+    return context
 
 
 def get_followers_feed(request, following_profiles):
@@ -80,22 +78,6 @@ def get_followers_feed(request, following_profiles):
         followers_feed = followers_feed.order_by('-date_posted')
         followers_feed = paginate(request, followers_feed, POSTS_ON_HOME_PAGE)
     return followers_feed
-
-
-def sort_global_feed(request, _sort_global_feed, all_posts):
-    sort_global_feed_best = _sort_global_feed.cleaned_data['best']
-    sort_global_feed_hot = _sort_global_feed.cleaned_data['hot']
-
-    global_feed = all_posts.order_by('-date_posted')
-    if sort_global_feed_best:
-        global_feed = sorted(all_posts, key=lambda x: x.likes_amount, reverse=True)
-    if sort_global_feed_hot:
-        date_from = datetime.datetime.now() - datetime.timedelta(days=DAYS_HOT_POSTS)
-        hot_feed = all_posts.filter(date_posted__gte=date_from)
-        global_feed = sorted(hot_feed, key=lambda x: x.likes_amount, reverse=True)
-        global_feed = paginate(request, global_feed, POSTS_ON_HOME_PAGE)
-
-    return global_feed
 
 
 def register(request):

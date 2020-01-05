@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'core.apps.CoreConfig',
 
     # third party
+
 ]
 
 MIDDLEWARE = [
@@ -61,11 +62,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'TamTut.wsgi.application'
 
-
-
 DATABASES = DATABASES
-
-
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
