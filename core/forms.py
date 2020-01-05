@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from core.models import Profile, Message, Post
+from core.models import Profile, Message, Post, Hobby
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -15,19 +15,20 @@ class UserRegistrationForm(UserCreationForm):
         fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2',)
 
 
-class EditProfileInfo(forms.ModelForm):
-    class Meta:
-        model = Profile
-        fields = ('image', 'hobby')
+def get_hobby_choices():
+    choices = []
+    for hobby in Hobby.objects.all():
+        choices.append((hobby, hobby))
+    choices = tuple(choices)
+    return choices
 
 
-class EditUserInfo(forms.ModelForm):
-    class Meta:
-        model = User
-        fields = ('first_name', 'last_name', 'email')
-
-
-class CoorsForm(forms.Form):
+class EditProfileForm(forms.Form):
+    first_name = forms.CharField(max_length=300, required=False, label='Имя')
+    last_name = forms.CharField(max_length=300, required=False, label='Фамилия')
+    email = forms.EmailField(required=False, label='Email')
+    image = forms.ImageField(allow_empty_file=True, required=False)
+    hobby = forms.MultipleChoiceField(choices=get_hobby_choices(), required=False)
     coors = forms.CharField(max_length=300, required=False, label='Координаты')
 
 
@@ -47,10 +48,6 @@ class MessageForm(forms.ModelForm):
         widgets = {
             'msg_text': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Напишите сообщение...', }),
         }
-
-
-class FollowButtonForm(forms.Form):
-    follow = forms.BooleanField(initial=True)
 
 
 class CreatePostForm(forms.ModelForm):

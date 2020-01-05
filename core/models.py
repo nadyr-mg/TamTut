@@ -30,7 +30,7 @@ class Profile(models.Model):
         hobbies = hobbies
         matched_profiles = Profile.objects.all()
         for hobby in hobbies:
-            matched_profiles = matched_profiles.filter(hobby__hobby=hobby)
+            matched_profiles = matched_profiles.filter(hobby__name=hobby)
         return matched_profiles
 
     def save(self, *args, **kwargs):
