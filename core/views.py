@@ -11,13 +11,11 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect, reverse
 from django.views.generic import ListView
 
+from core.enums import FeedSorting
 from core.forms import UserRegistrationForm, HobbyList, EditProfileForm, MessageForm, CreatePostForm
 from core.models import Profile, Message, Post, Hobby
 
-POSTS_ON_PROFILE_PAGE = 10
-POSTS_ON_HOME_PAGE = 20
-DAYS_HOT_POSTS = 3
-FOLLOWERS_ON_FOLLOWS_PAGE = 40
+from TamTut.settings import POSTS_ON_PROFILE_PAGE, POSTS_ON_HOME_PAGE, DAYS_HOT_POSTS, FOLLOWERS_ON_FOLLOWS_PAGE
 
 
 def paginate(request, objects, num_of_elements):
@@ -27,60 +25,8 @@ def paginate(request, objects, num_of_elements):
     return objects
 
 
-@login_required(login_url='login')
-def home(request, *args, **kwargs):
-    context = sorted_feed(request)
-    return render(request, 'core/home.html', context)
-
-
-def sorted_feed(request):
-    following_profiles = request.user.profile.follows.all()
-    all_posts = Post.objects.all()
-    feed = get_followers_feed(request, following_profiles)
-    global_feed = False
-
-    try:
-        global_new_param = request.GET['new']
-        global_new_feed = all_posts.order_by('-date_posted')
-        feed = global_new_feed
-        global_feed = True
-    except Exception:
-        pass
-
-    try:
-        global_new_param = request.GET['best']
-        global_best_feed = sorted(all_posts, key=lambda x: x.likes_amount, reverse=True)
-        feed = global_best_feed
-        global_feed = True
-    except Exception:
-        pass
-
-    try:
-        global_new_param = request.GET['hot']
-        date_from = datetime.datetime.now() - datetime.timedelta(days=DAYS_HOT_POSTS)
-        hot_feed = all_posts.filter(date_posted__gte=date_from)
-        global_hot_feed = sorted(hot_feed, key=lambda x: x.likes_amount, reverse=True)
-        feed = global_hot_feed
-        global_feed = True
-    except Exception:
-        pass
-    feed = paginate(request, feed, POSTS_ON_HOME_PAGE)
-    context = {
-        'feed': feed,
-        'global_feed': global_feed,
-    }
-    return context
-
-
-def get_followers_feed(request, following_profiles):
-    followers_feed = Post.objects.filter(author__in=following_profiles)
-    if followers_feed.exists():
-        followers_feed = followers_feed.order_by('-date_posted')
-        followers_feed = paginate(request, followers_feed, POSTS_ON_HOME_PAGE)
-    return followers_feed
-
-
 def register(request):
+    # TODO: Handle situation when authorized user attempts to register
     if request.method != 'POST':
         form = UserRegistrationForm()
     else:
@@ -98,6 +44,50 @@ def register(request):
 
     context = {'form': form}
     return render(request, 'core/register.html', context)
+
+
+@login_required(login_url='login')
+def home(request, *args, **kwargs):
+    is_global_feed = False
+    if 'sorting' in request.GET:
+        # if we have 'sorting' argument then we switch to global feed type
+        try:
+            arg = request.GET['sorting'].lower()
+            feed_sorting = FeedSorting(arg)
+            is_global_feed = True
+        except ValueError:
+            feed_sorting = None
+    else:
+        feed_sorting = None
+
+    all_posts = Post.objects.all()
+    if feed_sorting is None:
+        # means we return follower feed
+        following_profiles = request.user.profile.follows.all()
+        feed = get_followers_feed(request, following_profiles)
+    elif feed_sorting == FeedSorting.NEW:
+        feed = all_posts.order_by('-date_posted')
+    elif feed_sorting == FeedSorting.HOT:
+        date_from = datetime.datetime.now() - datetime.timedelta(days=DAYS_HOT_POSTS)
+        hot_feed = all_posts.filter(date_posted__gte=date_from)
+        feed = sorted(hot_feed, key=lambda x: x.likes_amount, reverse=True)
+    else:
+        feed = sorted(all_posts, key=lambda x: x.likes_amount, reverse=True)
+
+    feed = paginate(request, feed, POSTS_ON_HOME_PAGE)
+    context = {
+        'feed': feed,
+        'is_global_feed': is_global_feed,
+    }
+    return render(request, 'core/home.html', context)
+
+
+def get_followers_feed(request, following_profiles):
+    followers_feed = Post.objects.filter(author__in=following_profiles)
+    if followers_feed.exists():
+        followers_feed = followers_feed.order_by('-date_posted')
+        followers_feed = paginate(request, followers_feed, POSTS_ON_HOME_PAGE)
+    return followers_feed
 
 
 class ProfileFollowersView(ListView):
@@ -132,7 +122,6 @@ def profile(request, pk):
     target_profile = Profile.objects.get(user=profile_user)
 
     if request.method == 'GET':
-
         create_post_form = CreatePostForm()
 
         hobbies = target_profile.hobby.all()
@@ -154,6 +143,15 @@ def profile(request, pk):
         return redirect('profile', pk=target_profile.pk)
 
 
+def create_post(request, target_profile):
+    create_post_form = CreatePostForm(request.POST or None)
+    if create_post_form.is_valid():
+        post_text = create_post_form.cleaned_data['text']
+        Post.objects.create(author=request.user.profile, text=post_text)
+        return redirect('profile', pk=target_profile.pk)
+
+
+@login_required(login_url='login')
 def follow_target_profile(request, pk):
     try:
         target_user = User.objects.get(id=pk)
@@ -169,14 +167,6 @@ def follow_target_profile(request, pk):
         raise Http404("Page doesn't exist")
 
 
-def create_post(request, target_profile):
-    create_post_form = CreatePostForm(request.POST or None)
-    if create_post_form.is_valid():
-        post_text = create_post_form.cleaned_data['text']
-        Post.objects.create(author=request.user.profile, text=post_text)
-        return redirect('profile', pk=target_profile.pk)
-
-
 @login_required(login_url='login')
 def edit_profile(request):
     target_user = User.objects.get(id=request.user.id)
@@ -186,18 +176,21 @@ def edit_profile(request):
         edit_profile_form = EditProfileForm(request.POST, request.FILES)
 
         if edit_profile_form.is_valid():
-            coors = edit_profile_form.cleaned_data.get('coors')
-            first_name = edit_profile_form.cleaned_data.get('first_name')
-            last_name = edit_profile_form.cleaned_data.get('last_name')
-            email = edit_profile_form.cleaned_data.get('email')
-            hobby = edit_profile_form.cleaned_data.get('hobby')
-            image = edit_profile_form.cleaned_data.get('image')
+            data = edit_profile_form.cleaned_data
 
-            save_cur_user_info(target_user, first_name, last_name, email)
+            parameters = {
+                'first_name': data.get('first_name'),
+                'last_name': data.get('last_name'),
+                'email': data.get('email')
+            }
+            save_cur_user_info(target_user, parameters)
+
+            coors = data.get('coors')
+            hobby = data.get('hobby')
+            image = data.get('image')
             save_cur_prof_info(target_profile, hobby, image, coors)
 
             return redirect(reverse('profile', args=[request.user.id]))
-
     else:
         edit_profile_form = EditProfileForm({
             'first_name': target_user.first_name,
@@ -206,6 +199,7 @@ def edit_profile(request):
             'hobby': [hobby for hobby in target_profile.hobby.all().values_list('name', flat=True)],
             'coors': f'{target_profile.latitude}, {target_profile.longitude}'
         })
+        # TODO: set hobbies function
 
         context = {
             'edit_profile_form': edit_profile_form,
@@ -213,24 +207,27 @@ def edit_profile(request):
         return render(request, 'core/edit_profile.html', context)
 
 
-def save_cur_user_info(target_user, first_name, last_name, email):
-    target_user.first_name = first_name if first_name is not '' else target_user.first_name
-    target_user.last_name = last_name if last_name is not '' else target_user.last_name
-    target_user.email = email if email is not '' else target_user.email
+def save_cur_user_info(target_user, parameters):
+    for field, value in parameters.items():
+        setattr(target_user, field, value)
     target_user.save()
 
 
 def save_cur_prof_info(target_profile, hobby, image, coors):
     hobbies = Hobby.objects.filter(name__in=hobby)
     target_profile.hobby.set(hobbies)
+
     if image:
         target_profile.image = image
+
     if coors:
         lat, long = float(coors.split(', ')[0]), float(coors.split(', ')[1])
         target_profile.latitude, target_profile.longitude = lat, long
+
     target_profile.save()
 
 
+@login_required(login_url='login')
 def map_view(request, *args, **kwargs):
     hobbies_form = HobbyList()
     all_profiles = Profile.objects.all()
@@ -312,6 +309,7 @@ def chat_by_user(request, chat_username):
     return render(request, 'core/chat.html', context)
 
 
+@login_required(login_url='login')
 def like_post(request, pk):
     try:
         post = Post.objects.get(pk=pk)
@@ -321,6 +319,7 @@ def like_post(request, pk):
         raise Http404("User doesn't exist")
 
 
+@login_required(login_url='login')
 def dislike_post(request, pk):
     try:
         post = Post.objects.get(pk=pk)

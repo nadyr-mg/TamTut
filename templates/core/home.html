@@ -10,11 +10,11 @@
 
     </p>
     <a href="{% url 'home' %}">Followers</a>
-    <a href="{% url 'home' %}?new=true">Global</a>
-    {% if global_feed is True %}
-        <a href="{% url 'home' %}?new=true">New</a>
-        <a href="{% url 'home' %}?best=true">Best</a>
-        <a href="{% url 'home' %}?hot=true">Hot</a>
+    <a href="{% url 'home' %}?sorting=new">Global</a>
+    {% if is_global_feed is True %}
+        <a href="{% url 'home' %}?sorting=new">New</a>
+        <a href="{% url 'home' %}?sorting=hot">Hot</a>
+        <a href="{% url 'home' %}?sorting=best">Best</a>
     {% endif %}
 
 

@@ -1,0 +1,13 @@
+{
+  "db_credentials": {
+      "name": "DB_Name",
+      "user": "test_user",
+      "password": "password123",
+      "host": "localhost",
+      "port": "5432"
+  },
+  "POSTS_ON_PROFILE_PAGE": "10",
+  "POSTS_ON_HOME_PAGE": 20,
+  "DAYS_HOT_POSTS": 3,
+  "FOLLOWERS_ON_FOLLOWS_PAGE": 40
+}
