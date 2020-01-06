@@ -26,8 +26,9 @@ def paginate(request, objects, num_of_elements):
 
 
 def register(request):
-    # TODO: Handle situation when authorized user attempts to register
-    if request.method != 'POST':
+    if request.user.is_authenticated:
+        return redirect('home')
+    if request.method == 'GET':
         form = UserRegistrationForm()
     else:
         form = UserRegistrationForm(request.POST)
@@ -174,6 +175,7 @@ def edit_profile(request):
 
     if request.method == 'POST':
         edit_profile_form = EditProfileForm(request.POST, request.FILES)
+        edit_profile_form.set_hobbies_choices(Hobby.objects.all())
 
         if edit_profile_form.is_valid():
             data = edit_profile_form.cleaned_data
@@ -189,8 +191,10 @@ def edit_profile(request):
             hobby = data.get('hobby')
             image = data.get('image')
             save_cur_prof_info(target_profile, hobby, image, coors)
-
             return redirect(reverse('profile', args=[request.user.id]))
+        else:
+            return redirect(reverse('profile', args=[request.user.id]))
+
     else:
         edit_profile_form = EditProfileForm({
             'first_name': target_user.first_name,
@@ -199,8 +203,7 @@ def edit_profile(request):
             'hobby': [hobby for hobby in target_profile.hobby.all().values_list('name', flat=True)],
             'coors': f'{target_profile.latitude}, {target_profile.longitude}'
         })
-        # TODO: set hobbies function
-
+        edit_profile_form.set_hobbies_choices(Hobby.objects.all())
         context = {
             'edit_profile_form': edit_profile_form,
         }

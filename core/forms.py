@@ -28,8 +28,11 @@ class EditProfileForm(forms.Form):
     last_name = forms.CharField(max_length=300, required=False, label='Фамилия')
     email = forms.EmailField(required=False, label='Email')
     image = forms.ImageField(allow_empty_file=True, required=False)
-    hobby = forms.MultipleChoiceField(choices=get_hobby_choices(), required=False)
+    hobby = forms.MultipleChoiceField(choices=[], required=False)
     coors = forms.CharField(max_length=300, required=False, label='Координаты')
+
+    def set_hobbies_choices(self, hobbies):
+        self.fields['hobby'].choices = [(hobby, hobby) for hobby in hobbies]
 
 
 class HobbyList(forms.ModelForm):
