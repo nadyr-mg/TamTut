@@ -2,20 +2,16 @@ import datetime
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import Http404
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, redirect, reverse
+from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.views.generic import ListView
 
-from core.enums import FeedSorting
-from core.forms import UserRegistrationForm, HobbyList, EditProfileForm, MessageForm, CreatePostForm
-from core.models import Profile, Message, Post, Hobby
-
 from TamTut.settings import POSTS_ON_PROFILE_PAGE, POSTS_ON_HOME_PAGE, DAYS_HOT_POSTS, FOLLOWERS_ON_FOLLOWS_PAGE
+from core.enums import FeedSorting
+from core.forms import *
+from core.models import Profile, Message, Post, Hobby
 
 
 def paginate(request, objects, num_of_elements):
@@ -96,11 +92,9 @@ class ProfileFollowersView(ListView):
     paginate_by = FOLLOWERS_ON_FOLLOWS_PAGE
 
     def get_queryset(self):
-        try:
-            target_profile_followers = Profile.objects.get(pk=self.kwargs['pk']).followed_by.all()
-            return target_profile_followers
-        except Profile.DoesNotExist:
-            raise Http404("User doesn't exist")
+        target_profile = get_object_or_404(Profile, id=self.kwargs['pk'])
+        target_profile_followers = target_profile.followed_by.all()
+        return target_profile_followers
 
 
 class ProfileFollowingView(ListView):
@@ -108,18 +102,13 @@ class ProfileFollowingView(ListView):
     paginate_by = FOLLOWERS_ON_FOLLOWS_PAGE
 
     def get_queryset(self):
-        try:
-            target_profile_follows = Profile.objects.get(pk=self.kwargs['pk']).follows.all()
-            return target_profile_follows
-        except Profile.DoesNotExist:
-            raise Http404("User doesn't exist")
+        target_profile = get_object_or_404(Profile, id=self.kwargs['pk'])
+        target_profile_follows = target_profile.follows.all()
+        return target_profile_follows
 
 
 def profile(request, pk):
-    try:
-        profile_user = User.objects.get(id=pk)
-    except User.DoesNotExist:
-        raise Http404("Page doesn't exist")
+    profile_user = get_object_or_404(Profile, id=pk)
     target_profile = Profile.objects.get(user=profile_user)
 
     if request.method == 'GET':
@@ -154,18 +143,15 @@ def create_post(request, target_profile):
 
 @login_required(login_url='login')
 def follow_target_profile(request, pk):
-    try:
-        target_user = User.objects.get(id=pk)
-        target_profile = Profile.objects.get(user=target_user)
-        cur_profile = request.user.profile
-        if target_profile in cur_profile.follows.all():
-            cur_profile.follows.remove(target_profile)
-        else:
-            cur_profile.follows.add(target_profile)
+    target_user = get_object_or_404(User, id=pk)
+    target_profile = Profile.objects.get(user=target_user)
+    cur_profile = request.user.profile
+    if target_profile in cur_profile.follows.all():
+        cur_profile.follows.remove(target_profile)
+    else:
+        cur_profile.follows.add(target_profile)
 
-        return redirect('profile', pk=target_profile.pk)
-    except User.DoesNotExist:
-        raise Http404("Page doesn't exist")
+    return redirect('profile', pk=target_profile.pk)
 
 
 @login_required(login_url='login')
@@ -281,10 +267,7 @@ def chat_by_user(request, chat_username):
     if chat_username == request.user.username:
         return redirect(reverse('chat'))
 
-    try:
-        chat_user = User.objects.get(username=chat_username)
-    except ObjectDoesNotExist:
-        raise Http404("User doesn't exist")
+    chat_user = get_object_or_404(User, username=chat_username)
 
     if request.method == 'POST':
         msg_form = MessageForm(request.POST)
@@ -312,21 +295,19 @@ def chat_by_user(request, chat_username):
     return render(request, 'core/chat.html', context)
 
 
+def group_chat(request):
+    pass
+
+
 @login_required(login_url='login')
 def like_post(request, pk):
-    try:
-        post = Post.objects.get(pk=pk)
-        post.liked_by.add(request.user.profile)
-        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
-    except Post.DoesNotExist:
-        raise Http404("User doesn't exist")
+    post = get_object_or_404(Post, id=pk)
+    post.liked_by.add(request.user.profile)
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
 
 @login_required(login_url='login')
 def dislike_post(request, pk):
-    try:
-        post = Post.objects.get(pk=pk)
-        post.liked_by.remove(request.user.profile)
-        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
-    except Post.DoesNotExist:
-        raise Http404("User doesn't exist")
+    post = get_object_or_404(Post, id=pk)
+    post.liked_by.remove(request.user.profile)
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
