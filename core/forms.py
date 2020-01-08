@@ -15,14 +15,6 @@ class UserRegistrationForm(UserCreationForm):
         fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2',)
 
 
-def get_hobby_choices():
-    choices = []
-    for hobby in Hobby.objects.all():
-        choices.append((hobby, hobby))
-    choices = tuple(choices)
-    return choices
-
-
 class EditProfileForm(forms.Form):
     first_name = forms.CharField(max_length=300, required=False, label='Имя')
     last_name = forms.CharField(max_length=300, required=False, label='Фамилия')
