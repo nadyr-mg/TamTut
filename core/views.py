@@ -1,21 +1,15 @@
 import datetime
-from itertools import chain
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import Http404
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, redirect, reverse
+from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.views.generic import ListView
 
-from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, MessageForm, \
-    FollowButtonForm, CreatePostForm, FeedTypeForm, SortGlobalFeedForm
+from core.forms import *
 from core.models import Profile, Message, Post
-
 
 POSTS_ON_PROFILE_PAGE = 10
 
@@ -141,10 +135,7 @@ class ProfileFollowingView(ListView):
 
 
 def profile(request, pk):
-    try:
-        profile_user = User.objects.get(id=pk)
-    except User.DoesNotExist:
-        raise Http404("Page doesn't exist")
+    profile_user = get_object_or_404(User, id=pk)
     # 1
     target_profile = Profile.objects.get(user=profile_user)
 
@@ -263,31 +254,10 @@ def map_view(request, *args, **kwargs):
 
 
 @login_required(login_url='login')
-def chat(request):
-    cur_user_msgs = Message.user_msgs(request.user)
-    interlocutors = []
-    for msg in cur_user_msgs:
-        if msg.sender == request.user:
-            interlocutor = msg.receiver
-        else:
-            interlocutor = msg.sender
-
-        if interlocutor not in interlocutors:
-            interlocutors.append(interlocutor)
-
-    context = {'interlocutors': interlocutors}
-    return render(request, 'core/chat.html', context)
-
-
-@login_required(login_url='login')
 def chat_by_user(request, chat_username):
     if chat_username == request.user.username:
         return redirect(reverse('chat'))
-
-    try:
-        chat_user = User.objects.get(username=chat_username)
-    except ObjectDoesNotExist:
-        raise Http404("User doesn't exist")
+    chat_user = get_object_or_404(User, username=chat_username)
 
     if request.method == 'POST':
         msg_form = MessageForm(request.POST)
@@ -313,6 +283,27 @@ def chat_by_user(request, chat_username):
     context = {'msg_form': msg_form, 'new_all_msgs': msgs_by_user, 'chat_user': chat_user,
                'chat_username': chat_username, 'interlocutors': interlocutors}
     return render(request, 'core/chat.html', context)
+
+
+@login_required(login_url='login')
+def chat(request):
+    cur_user_msgs = Message.user_msgs(request.user)
+    interlocutors = []
+    for msg in cur_user_msgs:
+        if msg.sender == request.user:
+            interlocutor = msg.receiver
+        else:
+            interlocutor = msg.sender
+
+        if interlocutor not in interlocutors:
+            interlocutors.append(interlocutor)
+
+    context = {'interlocutors': interlocutors}
+    return render(request, 'core/chat.html', context)
+
+
+def group_chat(request):
+    pass
 
 
 def like_post(request, pk):
