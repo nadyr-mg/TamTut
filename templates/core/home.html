@@ -9,42 +9,12 @@
         <a href="{% url 'map_page' %}">Map </a>
 
     </p>
-    <form method="post">
-        {% csrf_token %}
-        <p>        {{ feed_type.global_feed.as_hidden }}
-
-        </p>
-        <button type="submit">Global</button>
-    </form>
-    <form method="post">
-        {% csrf_token %}
-        <p>        {{ feed_type.followers_feed.as_hidden }}
-        </p>
-        <button type="submit">Followers</button>
-    </form>
-
-    {% if global_feed is True %}
-
-        <form method="post">
-            {% csrf_token %}
-            {{ sort_global_feed.new.as_hidden }}
-            {{ feed_type.global_feed.as_hidden }}
-            <button type="submit">New</button>
-        </form>
-        <form method="post">
-            {% csrf_token %}
-            {{ sort_global_feed.best.as_hidden }}
-            {{ feed_type.global_feed.as_hidden }}
-
-            <button type="submit">Best</button>
-        </form>
-        <form method="post">
-            {% csrf_token %}
-            {{ sort_global_feed.hot.as_hidden }}
-            {{ feed_type.global_feed.as_hidden }}
-
-            <button type="submit">Hot</button>
-        </form>
+    <a href="{% url 'home' %}">Followers</a>
+    <a href="{% url 'home' %}?sorting=new">Global</a>
+    {% if is_global_feed is True %}
+        <a href="{% url 'home' %}?sorting=new">New</a>
+        <a href="{% url 'home' %}?sorting=hot">Hot</a>
+        <a href="{% url 'home' %}?sorting=best">Best</a>
     {% endif %}
 
 

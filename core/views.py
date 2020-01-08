@@ -1,5 +1,4 @@
 import datetime
-from itertools import chain
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
@@ -12,12 +11,11 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect, reverse
 from django.views.generic import ListView
 
-from core.forms import UserRegistrationForm, EditUserInfo, EditProfileInfo, HobbyList, CoorsForm, MessageForm, \
-    FollowButtonForm, CreatePostForm, FeedTypeForm, SortGlobalFeedForm
-from core.models import Profile, Message, Post
+from core.enums import FeedSorting
+from core.forms import UserRegistrationForm, HobbyList, EditProfileForm, MessageForm, CreatePostForm
+from core.models import Profile, Message, Post, Hobby
 
-
-POSTS_ON_PROFILE_PAGE = 10
+from TamTut.settings import POSTS_ON_PROFILE_PAGE, POSTS_ON_HOME_PAGE, DAYS_HOT_POSTS, FOLLOWERS_ON_FOLLOWS_PAGE
 
 
 def paginate(request, objects, num_of_elements):
@@ -27,81 +25,10 @@ def paginate(request, objects, num_of_elements):
     return objects
 
 
-@login_required(login_url='login')
-def home(request):
-    feed_type = FeedTypeForm()
-    following_profiles = request.user.profile.follows.all()
-
-    if request.method == 'GET':
-        feed = get_followers_feed(request, following_profiles)
-        context = {
-            'feed': feed,
-            'feed_type': feed_type
-        }
-        return render(request, 'core/home.html', context)
-    else:
-        # TODO: get rid of forms, use GET arguments in urls to switch between different feed types
-        feed_type_post = FeedTypeForm(request.POST or None)
-        if feed_type_post.is_valid():
-            followers_feed_true = feed_type_post.cleaned_data['followers_feed']
-            if followers_feed_true:
-                posts = get_followers_feed(request, following_profiles)
-                context = {
-                    'feed': posts,
-                    'feed_type': feed_type
-                }
-                return render(request, 'core/home.html', context)
-
-            global_feed_true = feed_type_post.cleaned_data['global_feed']
-            if global_feed_true:
-                sort_global_feed_form = SortGlobalFeedForm(request.POST or None)
-                all_posts = Post.objects.all()
-                if sort_global_feed_form.is_valid():
-                    global_feed = sort_global_feed(sort_global_feed_form, all_posts)
-                else:
-                    global_feed = sorted(all_posts, key=lambda x: x.date_posted, reverse=True)
-
-                global_feed = paginate(request, global_feed, 15)
-                context = {
-                    'feed': global_feed,
-                    'feed_type': feed_type,
-
-                    'global_feed': True,
-                    'sort_global_feed': SortGlobalFeedForm()
-                }
-                return render(request, 'core/home.html', context)
-
-        return redirect('home')
-
-
-def get_followers_feed(request, following_profiles):
-    followers_feed = Post.objects.filter(author__in=following_profiles)
-    if followers_feed.exists():
-        followers_feed = followers_feed.order_by('-date_posted')
-        # TODO: constant for page size
-        followers_feed = paginate(request, followers_feed, 20)
-    return followers_feed
-
-
-def sort_global_feed(_sort_global_feed, all_posts):
-    sort_global_feed_best = _sort_global_feed.cleaned_data['best']
-    sort_global_feed_hot = _sort_global_feed.cleaned_data['hot']
-
-    global_feed = all_posts.order_by('-date_posted')
-    if sort_global_feed_best:
-        global_feed = sorted(all_posts, key=lambda x: x.likes_amount, reverse=True)
-    if sort_global_feed_hot:
-        # TODO: constant for hot days
-        date_from = datetime.datetime.now() - datetime.timedelta(days=1)
-        hot_feed = all_posts.filter(date_posted__gte=date_from)
-        global_feed = sorted(hot_feed, key=lambda x: x.likes_amount, reverse=True)
-
-    # TODO: move pagination here, create a constant var to define page size for feed
-    return global_feed
-
-
 def register(request):
-    if request.method != 'POST':
+    if request.user.is_authenticated:
+        return redirect('home')
+    if request.method == 'GET':
         form = UserRegistrationForm()
     else:
         form = UserRegistrationForm(request.POST)
@@ -120,24 +47,72 @@ def register(request):
     return render(request, 'core/register.html', context)
 
 
+@login_required(login_url='login')
+def home(request, *args, **kwargs):
+    is_global_feed = False
+    if 'sorting' in request.GET:
+        # if we have 'sorting' argument then we switch to global feed type
+        try:
+            arg = request.GET['sorting'].lower()
+            feed_sorting = FeedSorting(arg)
+            is_global_feed = True
+        except ValueError:
+            feed_sorting = None
+    else:
+        feed_sorting = None
+
+    all_posts = Post.objects.all()
+    if feed_sorting is None:
+        # means we return follower feed
+        following_profiles = request.user.profile.follows.all()
+        feed = get_followers_feed(request, following_profiles)
+    elif feed_sorting == FeedSorting.NEW:
+        feed = all_posts.order_by('-date_posted')
+    elif feed_sorting == FeedSorting.HOT:
+        date_from = datetime.datetime.now() - datetime.timedelta(days=DAYS_HOT_POSTS)
+        hot_feed = all_posts.filter(date_posted__gte=date_from)
+        feed = sorted(hot_feed, key=lambda x: x.likes_amount, reverse=True)
+    else:
+        feed = sorted(all_posts, key=lambda x: x.likes_amount, reverse=True)
+
+    feed = paginate(request, feed, POSTS_ON_HOME_PAGE)
+    context = {
+        'feed': feed,
+        'is_global_feed': is_global_feed,
+    }
+    return render(request, 'core/home.html', context)
+
+
+def get_followers_feed(request, following_profiles):
+    followers_feed = Post.objects.filter(author__in=following_profiles)
+    if followers_feed.exists():
+        followers_feed = followers_feed.order_by('-date_posted')
+        followers_feed = paginate(request, followers_feed, POSTS_ON_HOME_PAGE)
+    return followers_feed
+
+
 class ProfileFollowersView(ListView):
     template_name = 'core/profile_followers_page.html'
-    # TODO: create a contant var
-    paginate_by = 50
+    paginate_by = FOLLOWERS_ON_FOLLOWS_PAGE
 
     def get_queryset(self):
-        # FIXME: check if profile doesn't exist
-        return Profile.objects.get(pk=self.kwargs['pk']).followed_by.all()
+        try:
+            target_profile_followers = Profile.objects.get(pk=self.kwargs['pk']).followed_by.all()
+            return target_profile_followers
+        except Profile.DoesNotExist:
+            raise Http404("User doesn't exist")
 
 
 class ProfileFollowingView(ListView):
     template_name = 'core/profile_following_page.html'
-    # TODO: create a contant var
-    paginate_by = 50
+    paginate_by = FOLLOWERS_ON_FOLLOWS_PAGE
 
     def get_queryset(self):
-        # FIXME: check if profile doesn't exist
-        return Profile.objects.get(pk=self.kwargs['pk']).follows.all()
+        try:
+            target_profile_follows = Profile.objects.get(pk=self.kwargs['pk']).follows.all()
+            return target_profile_follows
+        except Profile.DoesNotExist:
+            raise Http404("User doesn't exist")
 
 
 def profile(request, pk):
@@ -145,95 +120,117 @@ def profile(request, pk):
         profile_user = User.objects.get(id=pk)
     except User.DoesNotExist:
         raise Http404("Page doesn't exist")
-    # 1
     target_profile = Profile.objects.get(user=profile_user)
 
     if request.method == 'GET':
-        # 2
         create_post_form = CreatePostForm()
-        # 3
-        follow_button_form = FollowButtonForm()
 
-        # 1
         hobbies = target_profile.hobby.all()
         followed_by = target_profile.followed_by.all()
 
-        # 1
         posts = target_profile.posts.all()
         posts = paginate(request, posts, POSTS_ON_PROFILE_PAGE)
         context = {
             'hobbies': hobbies,
             'prof': target_profile,
             'create_post_form': create_post_form,
-            'follow_button_form': follow_button_form,
             'posts': posts,
             'followed_by': followed_by
         }
         return render(request, 'core/profile.html', context)
     else:
-        # 2
-        create_post_form = CreatePostForm(request.POST or None)
-
-        # 3
-        # TODO: Move to a different view  and url (instead of using a separate form)
-        follow_button_form = FollowButtonForm(request.POST or None)
-        if follow_button_form.is_valid():
-            following = follow_button_form.cleaned_data['follow']
-            if following is True:
-                cur_profile = request.user.profile
-                if target_profile in cur_profile.follows.all():
-                    cur_profile.follows.remove(target_profile)
-                else:
-                    cur_profile.follows.add(target_profile)
-
-                return redirect('profile', pk=target_profile.pk)
-
-        # 2
-        # TODO: Move to a different view and url
-        if create_post_form.is_valid():
-            post_text = create_post_form.cleaned_data['text']
-            Post.objects.create(author=request.user.profile, text=post_text)
-            return redirect('profile', pk=target_profile.pk)
+        create_post(request, target_profile)
 
         return redirect('profile', pk=target_profile.pk)
 
 
+def create_post(request, target_profile):
+    create_post_form = CreatePostForm(request.POST or None)
+    if create_post_form.is_valid():
+        post_text = create_post_form.cleaned_data['text']
+        Post.objects.create(author=request.user.profile, text=post_text)
+        return redirect('profile', pk=target_profile.pk)
+
+
+@login_required(login_url='login')
+def follow_target_profile(request, pk):
+    try:
+        target_user = User.objects.get(id=pk)
+        target_profile = Profile.objects.get(user=target_user)
+        cur_profile = request.user.profile
+        if target_profile in cur_profile.follows.all():
+            cur_profile.follows.remove(target_profile)
+        else:
+            cur_profile.follows.add(target_profile)
+
+        return redirect('profile', pk=target_profile.pk)
+    except User.DoesNotExist:
+        raise Http404("Page doesn't exist")
+
+
 @login_required(login_url='login')
 def edit_profile(request):
+    target_user = User.objects.get(id=request.user.id)
+    target_profile = target_user.profile
+
     if request.method == 'POST':
-        # TODO: merge 3 forms (EditUserInfo, EditProfileInfo, CoorsForm) into one
-        u_form = EditUserInfo(request.POST, instance=request.user)
-        p_form = EditProfileInfo(request.POST,
-                                 request.FILES,
-                                 instance=request.user.profile)
-        coors_form = CoorsForm(request.POST or None)
-        if u_form.is_valid() and p_form.is_valid():
-            u_form.save()
-            p_form.save()
+        edit_profile_form = EditProfileForm(request.POST, request.FILES)
+        edit_profile_form.set_hobbies_choices(Hobby.objects.all())
 
-        if coors_form.is_valid():
-            coors = coors_form.cleaned_data.get('coors')
-            if coors:
-                lat, long = float(coors.split(', ')[0]), float(coors.split(', ')[1])
+        if edit_profile_form.is_valid():
+            data = edit_profile_form.cleaned_data
 
-                cur_profile = Profile.objects.get(user=request.user)
-                cur_profile.latitude, cur_profile.longitude = lat, long
-                cur_profile.save()
+            parameters = {
+                'first_name': data.get('first_name'),
+                'last_name': data.get('last_name'),
+                'email': data.get('email')
+            }
+            save_cur_user_info(target_user, parameters)
 
-                return redirect(reverse('profile', args=[request.user.id]))
+            coors = data.get('coors')
+            hobby = data.get('hobby')
+            image = data.get('image')
+            save_cur_prof_info(target_profile, hobby, image, coors)
+            return redirect(reverse('profile', args=[request.user.id]))
+        else:
+            return redirect(reverse('profile', args=[request.user.id]))
+
     else:
-        u_form = EditUserInfo(instance=request.user)
-        p_form = EditProfileInfo(instance=request.user.profile)
-        coors_form = CoorsForm()
+        edit_profile_form = EditProfileForm({
+            'first_name': target_user.first_name,
+            'last_name': target_user.last_name,
+            'email': target_user.email,
+            'hobby': [hobby for hobby in target_profile.hobby.all().values_list('name', flat=True)],
+            'coors': f'{target_profile.latitude}, {target_profile.longitude}'
+        })
+        edit_profile_form.set_hobbies_choices(Hobby.objects.all())
+        context = {
+            'edit_profile_form': edit_profile_form,
+        }
+        return render(request, 'core/edit_profile.html', context)
 
-    context = {
-        'u_form': u_form,
-        'p_form': p_form,
-        'coors_form': coors_form,
-    }
-    return render(request, 'core/edit_profile.html', context)
+
+def save_cur_user_info(target_user, parameters):
+    for field, value in parameters.items():
+        setattr(target_user, field, value)
+    target_user.save()
 
 
+def save_cur_prof_info(target_profile, hobby, image, coors):
+    hobbies = Hobby.objects.filter(name__in=hobby)
+    target_profile.hobby.set(hobbies)
+
+    if image:
+        target_profile.image = image
+
+    if coors:
+        lat, long = float(coors.split(', ')[0]), float(coors.split(', ')[1])
+        target_profile.latitude, target_profile.longitude = lat, long
+
+    target_profile.save()
+
+
+@login_required(login_url='login')
 def map_view(request, *args, **kwargs):
     hobbies_form = HobbyList()
     all_profiles = Profile.objects.all()
@@ -315,15 +312,21 @@ def chat_by_user(request, chat_username):
     return render(request, 'core/chat.html', context)
 
 
+@login_required(login_url='login')
 def like_post(request, pk):
-    # TODO: check if post doesn't exist
-    post = Post.objects.get(pk=pk)
-    post.liked_by.add(request.user.profile)
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+    try:
+        post = Post.objects.get(pk=pk)
+        post.liked_by.add(request.user.profile)
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+    except Post.DoesNotExist:
+        raise Http404("User doesn't exist")
 
 
+@login_required(login_url='login')
 def dislike_post(request, pk):
-    # TODO: check if post doesn't exist
-    post = Post.objects.get(pk=pk)
-    post.liked_by.remove(request.user.profile)
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+    try:
+        post = Post.objects.get(pk=pk)
+        post.liked_by.remove(request.user.profile)
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
+    except Post.DoesNotExist:
+        raise Http404("User doesn't exist")
