@@ -17,26 +17,19 @@
                 {% else %}
                     <a> | {{ prof.follows.all|length }} following</a>
                 {% endif %}
-                {% if request.user != prof.user %}
-                    {% if prof in request.user.profile.follows.all %}
-                        <form method="post">
-                            {% csrf_token %}
-                            <p>
-                                {{ follow_button_form.follow.as_hidden }}
-                            </p>
-                            <button type="submit">Unfollow</button>
-                        </form>
-                    {% else %}
-                        <form method="post">
-                            {% csrf_token %}
-                            <p>
-                                {{ follow_button_form.follow.as_hidden }}
-                            </p>
-                            <button type="submit">Follow</button>
-                        </form>
-                    {% endif %}
-                {% endif %}
+
             </h2>
+            <h3>
+                {% if request.user != prof.user %}
+                    <p>
+                        {% if prof in request.user.profile.follows.all %}
+                            <a href="{% url 'follow' prof.pk %}">Unfollow </a>
+                        {% else %}
+                            <a href="{% url 'follow' prof.pk %}">Follow </a>
+                        {% endif %}
+                    </p>
+                {% endif %}
+            </h3>
 
             <img src="{{ prof.image.url }}">
 

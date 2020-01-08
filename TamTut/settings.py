@@ -1,4 +1,5 @@
 import os
+import json
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -60,14 +61,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'TamTut.wsgi.application'
 
+with open('config.json') as config_file:
+    config = json.load(config_file)
+
+db_credentials = config['db_credentials']
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mydb',
-        'USER': 'postgres',
-        'PASSWORD': 'testing321',
-        'HOST': 'localhost',
-        'PORT': '5432',
+    "default": {
+      "ENGINE": "django.db.backends.postgresql",
+      "NAME": db_credentials['name'],
+      "USER": db_credentials['user'],
+      "PASSWORD": db_credentials['password'],
+      "HOST": db_credentials['host'],
+      "PORT": db_credentials['port']
     }
 }
 
@@ -109,3 +114,9 @@ STATIC_URL = '/static/'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+POSTS_ON_PROFILE_PAGE = config['POSTS_ON_PROFILE_PAGE']
+POSTS_ON_HOME_PAGE = config['POSTS_ON_HOME_PAGE']
+DAYS_HOT_POSTS = config['DAYS_HOT_POSTS']
+FOLLOWERS_ON_FOLLOWS_PAGE = config['FOLLOWERS_ON_FOLLOWS_PAGE']

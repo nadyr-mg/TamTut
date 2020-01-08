@@ -6,9 +6,7 @@
 
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        {{ p_form.as_p }}
-        {{ u_form.as_p }}
-        {{ coors_form }}
+        {{ edit_profile_form.as_p }}
 
         <button type="submit">submit</button>
     </form>
