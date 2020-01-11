@@ -10,8 +10,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'ajt!oh%!dcs^c@cmj1$esm_(3omdzd8gau*0r%xb0bx4kg(&n6'
 
+with open('config.json') as config_file:
+    config = json.load(config_file)
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config.get('DEBUG', False)
 
 ALLOWED_HOSTS = '*'
 
@@ -62,8 +65,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'TamTut.wsgi.application'
 
-with open('config.json') as config_file:
-    config = json.load(config_file)
+
 
 db_credentials = config['db_credentials']
 DATABASES = {

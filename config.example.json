@@ -1,4 +1,5 @@
 {
+  "DEBUG": true,
   "db_credentials": {
       "name": "DB_Name",
       "user": "test_user",

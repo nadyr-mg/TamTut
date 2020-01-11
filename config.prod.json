@@ -1,4 +1,5 @@
 {
+  "DEBUG": false,
   "db_credentials": {
       "name": "mydb",
       "user": "postgres",
