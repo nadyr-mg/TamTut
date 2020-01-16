@@ -93,7 +93,8 @@ class Message(models.Model):
 class GroupChat(models.Model):
     author = models.ForeignKey(User, related_name='created_group_chats', on_delete=models.SET_NULL, null=True)
     chat_users = models.ManyToManyField(User, related_name='inside_group_chats')
-    chat_title = models.CharField(max_length=30)
+    chat_title = models.CharField(max_length=30, unique=True)
+    image = models.ImageField(default='default.jpg', upload_to='profile_pics')
 
     def __str__(self):
         return self.chat_title

@@ -15,12 +15,13 @@ urlpatterns = [
     path('profile/<int:pk>/follow/', views.follow_target_profile, name='follow'),
     path('profile/edit/', views.edit_profile, name='edit_profile'),
 
-    path('chat/', views.chat, name='chat'),
+    path('chat/', views.chat_list, name='chat_list'),
     path('chat/<str:chat_username>/', views.chat_by_user, name='chat_by_user'),
+    path('chat/group/create/', views.group_chat_create, name='group_chat_create'),
+    path('chat/group/<int:group_chat_id>/', views.group_chat, name='group_chat'),
 
     path('map/', views.map_view, name='map_page'),
 
     path('likepost/<int:pk>/', views.like_post, name='like_post'),
     path('dislikepost/<int:pk>/', views.dislike_post, name='dislike_post'),
 ]
-

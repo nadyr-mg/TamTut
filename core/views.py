@@ -11,7 +11,7 @@ from django.views.generic import ListView
 from TamTut.settings import POSTS_ON_PROFILE_PAGE, POSTS_ON_HOME_PAGE, DAYS_HOT_POSTS, FOLLOWERS_ON_FOLLOWS_PAGE
 from core.enums import FeedSorting
 from core.forms import *
-from core.models import Profile, Message, Post, Hobby
+from core.models import Profile, Message, Post, Hobby, GroupChat
 
 
 def paginate(request, objects, num_of_elements):
@@ -108,7 +108,7 @@ class ProfileFollowingView(ListView):
 
 
 def profile(request, pk):
-    profile_user = get_object_or_404(Profile, id=pk)
+    profile_user = get_object_or_404(User, id=pk)
     target_profile = Profile.objects.get(user=profile_user)
 
     if request.method == 'GET':
@@ -245,8 +245,9 @@ def map_view(request, *args, **kwargs):
             return render(request, 'core/map.html', context)
 
 
+# FIXME forbid showing your account on left side list
 @login_required(login_url='login')
-def chat(request):
+def chat_list(request):
     cur_user_msgs = Message.user_msgs(request.user)
     interlocutors = []
     for msg in cur_user_msgs:
@@ -258,7 +259,12 @@ def chat(request):
         if interlocutor not in interlocutors:
             interlocutors.append(interlocutor)
 
-    context = {'interlocutors': interlocutors}
+    group_chats = request.user.created_group_chats.all()
+    group_chats = list(group_chats)
+    context = {
+        'interlocutors': interlocutors,
+        'group_chats': group_chats
+    }
     return render(request, 'core/chat.html', context)
 
 
@@ -269,14 +275,11 @@ def chat_by_user(request, chat_username):
 
     chat_user = get_object_or_404(User, username=chat_username)
 
-    if request.method == 'POST':
-        msg_form = MessageForm(request.POST)
-        if msg_form.is_valid():
-            msg_text = msg_form.cleaned_data['msg_text']
-            Message.objects.create(receiver=chat_user, sender=request.user, msg_text=msg_text)
-            return redirect(reverse('chat_by_user', args=[chat_username]))
-    else:
-        msg_form = MessageForm()
+    msg_form = MessageForm(request.POST or None)
+    if msg_form.is_valid():
+        msg_text = msg_form.cleaned_data['msg_text']
+        Message.objects.create(receiver=chat_user, sender=request.user, msg_text=msg_text)
+        return redirect(reverse('chat_by_user', args=[chat_username]))
 
     cur_user_msgs = Message.user_msgs(request.user)
     interlocutors = []
@@ -289,14 +292,79 @@ def chat_by_user(request, chat_username):
         if interlocutor not in interlocutors:
             interlocutors.append(interlocutor)
 
+    group_chats = request.user.created_group_chats.all()
+    group_chats = list(group_chats)
+
     msgs_by_user = cur_user_msgs.filter(Q(sender=chat_user) | Q(receiver=chat_user)).order_by('date_sent')
-    context = {'msg_form': msg_form, 'new_all_msgs': msgs_by_user, 'chat_user': chat_user,
-               'chat_username': chat_username, 'interlocutors': interlocutors}
+
+    context = {
+        'msg_form': msg_form,
+        'new_all_msgs': msgs_by_user,
+        'chat_user': chat_user,
+        'chat_username': chat_username,
+        'interlocutors': interlocutors,
+        'group_chats': group_chats
+    }
     return render(request, 'core/chat.html', context)
 
 
-def group_chat(request):
-    pass
+def group_chat_create(request):
+    group_chat_form = GroupChatForm(request.POST or None)
+    context = {
+        'group_chat_form': group_chat_form,
+    }
+
+    if group_chat_form.is_valid():
+        group_chat_title = group_chat_form.cleaned_data['chat_title']
+        group_chat_users = group_chat_form.cleaned_data['chat_users']
+
+        group_chat_instance = GroupChat.objects.create(author=request.user, chat_title=group_chat_title)
+        group_chat_instance.chat_users.set(group_chat_users)
+
+        group_chats = request.user.created_group_chats.all()
+
+        context = {
+            'group_chat_form': group_chat_form,
+            'group_chats': group_chats,
+        }
+        return render(request, 'core/chat.html', context)
+
+    return render(request, 'core/create_group_chat.html', context)
+
+
+def group_chat(request, group_chat_id):
+    group_chat_instance = get_object_or_404(GroupChat, id=group_chat_id)
+
+    cur_user_msgs = Message.user_msgs(request.user)
+    interlocutors = []
+    for msg in cur_user_msgs:
+        if msg.sender == request.user:
+            interlocutor = msg.receiver
+        else:
+            interlocutor = msg.sender
+
+        if interlocutor not in interlocutors:
+            interlocutors.append(interlocutor)
+
+    group_chats = request.user.created_group_chats.all()
+
+    msg_form = MessageForm(request.POST or None)
+    if msg_form.is_valid():
+        msg_text = msg_form.cleaned_data['msg_text']
+        Message.objects.create(sender=request.user, msg_text=msg_text, group_chat_in=group_chat_instance)
+        return redirect(reverse('group_chat', args=[group_chat_id]))
+
+    group_chat_msgs = group_chat_instance.group_msgs.all().order_by('date_sent')
+
+    context = {
+        'interlocutors': interlocutors,
+        'group_chats': group_chats,
+        'group_chat_msgs': group_chat_msgs,
+        'group_chat_instance': group_chat_instance,
+        'group_chat_id': group_chat_id,
+        'msg_form': msg_form,
+    }
+    return render(request, 'core/chat.html', context)
 
 
 @login_required(login_url='login')

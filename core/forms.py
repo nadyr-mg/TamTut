@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from core.models import Profile, Message, Post, Hobby
+from core.models import Profile, Message, Post, GroupChat
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -52,3 +52,11 @@ class CreatePostForm(forms.ModelForm):
         widgets = {
             'text': forms.Textarea(attrs={'rows': 3}),
         }
+
+
+class GroupChatForm(forms.ModelForm):
+    class Meta:
+        model = GroupChat
+        fields = (
+            'chat_title', 'chat_users',
+        )
