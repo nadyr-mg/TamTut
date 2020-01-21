@@ -2,20 +2,16 @@ import datetime
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import Http404
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, redirect, reverse
+from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.views.generic import ListView
 
-from core.enums import FeedSorting
-from core.forms import UserRegistrationForm, HobbyList, EditProfileForm, MessageForm, CreatePostForm
-from core.models import Profile, Message, Post, Hobby
-
 from TamTut.settings import POSTS_ON_PROFILE_PAGE, POSTS_ON_HOME_PAGE, DAYS_HOT_POSTS, FOLLOWERS_ON_FOLLOWS_PAGE
+from core.enums import FeedSorting
+from core.forms import *
+from core.models import Profile, Message, Post, Hobby, GroupChat
 
 
 def paginate(request, objects, num_of_elements):
@@ -96,11 +92,9 @@ class ProfileFollowersView(ListView):
     paginate_by = FOLLOWERS_ON_FOLLOWS_PAGE
 
     def get_queryset(self):
-        try:
-            target_profile_followers = Profile.objects.get(pk=self.kwargs['pk']).followed_by.all()
-            return target_profile_followers
-        except Profile.DoesNotExist:
-            raise Http404("User doesn't exist")
+        target_profile = get_object_or_404(Profile, id=self.kwargs['pk'])
+        target_profile_followers = target_profile.followed_by.all()
+        return target_profile_followers
 
 
 class ProfileFollowingView(ListView):
@@ -108,18 +102,13 @@ class ProfileFollowingView(ListView):
     paginate_by = FOLLOWERS_ON_FOLLOWS_PAGE
 
     def get_queryset(self):
-        try:
-            target_profile_follows = Profile.objects.get(pk=self.kwargs['pk']).follows.all()
-            return target_profile_follows
-        except Profile.DoesNotExist:
-            raise Http404("User doesn't exist")
+        target_profile = get_object_or_404(Profile, id=self.kwargs['pk'])
+        target_profile_follows = target_profile.follows.all()
+        return target_profile_follows
 
 
 def profile(request, pk):
-    try:
-        profile_user = User.objects.get(id=pk)
-    except User.DoesNotExist:
-        raise Http404("Page doesn't exist")
+    profile_user = get_object_or_404(User, id=pk)
     target_profile = Profile.objects.get(user=profile_user)
 
     if request.method == 'GET':
@@ -154,18 +143,15 @@ def create_post(request, target_profile):
 
 @login_required(login_url='login')
 def follow_target_profile(request, pk):
-    try:
-        target_user = User.objects.get(id=pk)
-        target_profile = Profile.objects.get(user=target_user)
-        cur_profile = request.user.profile
-        if target_profile in cur_profile.follows.all():
-            cur_profile.follows.remove(target_profile)
-        else:
-            cur_profile.follows.add(target_profile)
+    target_user = get_object_or_404(User, id=pk)
+    target_profile = Profile.objects.get(user=target_user)
+    cur_profile = request.user.profile
+    if target_profile in cur_profile.follows.all():
+        cur_profile.follows.remove(target_profile)
+    else:
+        cur_profile.follows.add(target_profile)
 
-        return redirect('profile', pk=target_profile.pk)
-    except User.DoesNotExist:
-        raise Http404("Page doesn't exist")
+    return redirect('profile', pk=target_profile.pk)
 
 
 @login_required(login_url='login')
@@ -259,74 +245,127 @@ def map_view(request, *args, **kwargs):
             return render(request, 'core/map.html', context)
 
 
-@login_required(login_url='login')
-def chat(request):
-    cur_user_msgs = Message.user_msgs(request.user)
-    interlocutors = []
-    for msg in cur_user_msgs:
-        if msg.sender == request.user:
+def conversations_list(user: User):
+    dialog_msgs = Message.user_msgs(user)
+
+    all_conversations = []
+    used_interlocutors = set()
+    for msg in dialog_msgs:
+        if msg.sender == user:
             interlocutor = msg.receiver
         else:
             interlocutor = msg.sender
 
-        if interlocutor not in interlocutors:
-            interlocutors.append(interlocutor)
+        if interlocutor not in used_interlocutors:
+            all_conversations.append(
+                {"object": interlocutor, "date": msg.date_sent}
+            )
+            used_interlocutors.add(interlocutor)
 
-    context = {'interlocutors': interlocutors}
+    for group in user.inside_group_chats.all():
+        msg = Message.objects.filter(group_chat_in=group).order_by('-date_sent').first()
+        if msg is None:
+            _date = group.date_created
+        else:
+            _date = msg.date_sent
+
+        all_conversations.append(
+            {"object": group, "date": _date}
+        )
+
+    all_conversations.sort(key=lambda o: o["date"], reverse=True)
+
+    return all_conversations
+
+
+@login_required(login_url='login')
+def chat_list(request):
+    all_conversations = conversations_list(request.user)
+
+    context = {
+        'all_conversations': all_conversations
+    }
     return render(request, 'core/chat.html', context)
 
 
 @login_required(login_url='login')
 def chat_by_user(request, chat_username):
     if chat_username == request.user.username:
-        return redirect(reverse('chat'))
+        return redirect(reverse('chat_list'))
 
-    try:
-        chat_user = User.objects.get(username=chat_username)
-    except ObjectDoesNotExist:
-        raise Http404("User doesn't exist")
+    chat_user = get_object_or_404(User, username=chat_username)
 
-    if request.method == 'POST':
-        msg_form = MessageForm(request.POST)
-        if msg_form.is_valid():
-            msg_text = msg_form.cleaned_data['msg_text']
-            Message.objects.create(receiver=chat_user, sender=request.user, msg_text=msg_text)
-            return redirect(reverse('chat_by_user', args=[chat_username]))
-    else:
-        msg_form = MessageForm()
+    msg_form = MessageForm(request.POST or None)
+    if msg_form.is_valid():
+        msg_text = msg_form.cleaned_data['msg_text']
+        Message.objects.create(receiver=chat_user, sender=request.user, msg_text=msg_text)
+        return redirect(reverse('chat_by_user', args=[chat_username]))
 
     cur_user_msgs = Message.user_msgs(request.user)
-    interlocutors = []
-    for msg in cur_user_msgs:
-        if msg.sender == request.user:
-            interlocutor = msg.receiver
-        else:
-            interlocutor = msg.sender
-
-        if interlocutor not in interlocutors:
-            interlocutors.append(interlocutor)
-
     msgs_by_user = cur_user_msgs.filter(Q(sender=chat_user) | Q(receiver=chat_user)).order_by('date_sent')
-    context = {'msg_form': msg_form, 'new_all_msgs': msgs_by_user, 'chat_user': chat_user,
-               'chat_username': chat_username, 'interlocutors': interlocutors}
+
+    all_conversations = conversations_list(request.user)
+
+    context = {
+        'all_conversations': all_conversations,
+        'msg_form': msg_form,
+        'new_all_msgs': msgs_by_user,
+        'chat_user': chat_user,
+        'chat_username': chat_username,
+    }
+    return render(request, 'core/chat.html', context)
+
+
+def group_chat_create(request):
+    group_chat_form = GroupChatForm(request.POST or None)
+
+    if group_chat_form.is_valid():
+        group_chat_title = group_chat_form.cleaned_data['chat_title']
+        group_chat_users = group_chat_form.cleaned_data['chat_users']
+
+        group_chat_instance = GroupChat.objects.create(author=request.user, chat_title=group_chat_title)
+        group_chat_instance.chat_users.set(group_chat_users)
+
+        return redirect('group_chat', group_chat_id=group_chat_instance.id)
+
+    context = {
+        'group_chat_form': group_chat_form,
+    }
+    return render(request, 'core/create_group_chat.html', context)
+
+
+def group_chat(request, group_chat_id):
+    group_chat_instance = get_object_or_404(GroupChat, id=group_chat_id)
+
+    msg_form = MessageForm(request.POST or None)
+    if msg_form.is_valid():
+        msg_text = msg_form.cleaned_data['msg_text']
+        Message.objects.create(sender=request.user, msg_text=msg_text, group_chat_in=group_chat_instance)
+        return redirect('group_chat', group_chat_id=group_chat_id)
+
+    group_chat_msgs = group_chat_instance.group_msgs.all().order_by('date_sent')
+
+    all_conversations = conversations_list(request.user)
+
+    context = {
+        'all_conversations': all_conversations,
+        'group_chat_msgs': group_chat_msgs,
+        'group_chat_instance': group_chat_instance,
+        'group_chat_id': group_chat_id,
+        'msg_form': msg_form,
+    }
     return render(request, 'core/chat.html', context)
 
 
 @login_required(login_url='login')
 def like_post(request, pk):
-    try:
-        post = Post.objects.get(pk=pk)
-        post.liked_by.add(request.user.profile)
-        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
-    except Post.DoesNotExist:
-        raise Http404("User doesn't exist")
+    post = get_object_or_404(Post, id=pk)
+    post.liked_by.add(request.user.profile)
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
 
 
 @login_required(login_url='login')
 def dislike_post(request, pk):
-    try:
-        post = Post.objects.get(pk=pk)
-        post.liked_by.remove(request.user.profile)
-        return HttpResponseRedirect(request.META.get('HTTP_REFERER'))
-    except Post.DoesNotExist:
-        raise Http404("User doesn't exist")
+    post = get_object_or_404(Post, id=pk)
+    post.liked_by.remove(request.user.profile)
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER'))

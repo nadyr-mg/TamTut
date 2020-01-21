@@ -1,0 +1,11 @@
+{% include 'core/navbar.html' %}
+
+{% block content %}
+
+    <form method="post">
+        {% csrf_token %}
+        {{ group_chat_form.as_p }}
+    <button type="submit">create</button>
+    </form>
+
+{% endblock content %}

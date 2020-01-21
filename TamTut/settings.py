@@ -29,7 +29,6 @@ INSTALLED_APPS = [
     'core.apps.CoreConfig',
 
     # third party
-
 ]
 
 MIDDLEWARE = [
