@@ -245,25 +245,45 @@ def map_view(request, *args, **kwargs):
             return render(request, 'core/map.html', context)
 
 
-# FIXME forbid showing your account on left side list
-@login_required(login_url='login')
-def chat_list(request):
-    cur_user_msgs = Message.user_msgs(request.user)
-    interlocutors = []
-    for msg in cur_user_msgs:
-        if msg.sender == request.user:
+def conversations_list(user: User):
+    dialog_msgs = Message.user_msgs(user)
+
+    all_conversations = []
+    used_interlocutors = set()
+    for msg in dialog_msgs:
+        if msg.sender == user:
             interlocutor = msg.receiver
         else:
             interlocutor = msg.sender
 
-        if interlocutor not in interlocutors:
-            interlocutors.append(interlocutor)
+        if interlocutor not in used_interlocutors:
+            all_conversations.append(
+                {"object": interlocutor, "date": msg.date_sent}
+            )
+            used_interlocutors.add(interlocutor)
 
-    group_chats = request.user.created_group_chats.all()
-    group_chats = list(group_chats)
+    for group in user.inside_group_chats.all():
+        msg = Message.objects.filter(group_chat_in=group).order_by('-date_sent').first()
+        if msg is None:
+            _date = group.date_created
+        else:
+            _date = msg.date_sent
+
+        all_conversations.append(
+            {"object": group, "date": _date}
+        )
+
+    all_conversations.sort(key=lambda o: o["date"], reverse=True)
+
+    return all_conversations
+
+
+@login_required(login_url='login')
+def chat_list(request):
+    all_conversations = conversations_list(request.user)
+
     context = {
-        'interlocutors': interlocutors,
-        'group_chats': group_chats
+        'all_conversations': all_conversations
     }
     return render(request, 'core/chat.html', context)
 
@@ -271,7 +291,7 @@ def chat_list(request):
 @login_required(login_url='login')
 def chat_by_user(request, chat_username):
     if chat_username == request.user.username:
-        return redirect(reverse('chat'))
+        return redirect(reverse('chat_list'))
 
     chat_user = get_object_or_404(User, username=chat_username)
 
@@ -282,37 +302,22 @@ def chat_by_user(request, chat_username):
         return redirect(reverse('chat_by_user', args=[chat_username]))
 
     cur_user_msgs = Message.user_msgs(request.user)
-    interlocutors = []
-    for msg in cur_user_msgs:
-        if msg.sender == request.user:
-            interlocutor = msg.receiver
-        else:
-            interlocutor = msg.sender
-
-        if interlocutor not in interlocutors:
-            interlocutors.append(interlocutor)
-
-    group_chats = request.user.created_group_chats.all()
-    group_chats = list(group_chats)
-
     msgs_by_user = cur_user_msgs.filter(Q(sender=chat_user) | Q(receiver=chat_user)).order_by('date_sent')
 
+    all_conversations = conversations_list(request.user)
+
     context = {
+        'all_conversations': all_conversations,
         'msg_form': msg_form,
         'new_all_msgs': msgs_by_user,
         'chat_user': chat_user,
         'chat_username': chat_username,
-        'interlocutors': interlocutors,
-        'group_chats': group_chats
     }
     return render(request, 'core/chat.html', context)
 
 
 def group_chat_create(request):
     group_chat_form = GroupChatForm(request.POST or None)
-    context = {
-        'group_chat_form': group_chat_form,
-    }
 
     if group_chat_form.is_valid():
         group_chat_title = group_chat_form.cleaned_data['chat_title']
@@ -321,44 +326,29 @@ def group_chat_create(request):
         group_chat_instance = GroupChat.objects.create(author=request.user, chat_title=group_chat_title)
         group_chat_instance.chat_users.set(group_chat_users)
 
-        group_chats = request.user.created_group_chats.all()
+        return redirect('group_chat', group_chat_id=group_chat_instance.id)
 
-        context = {
-            'group_chat_form': group_chat_form,
-            'group_chats': group_chats,
-        }
-        return render(request, 'core/chat.html', context)
-
+    context = {
+        'group_chat_form': group_chat_form,
+    }
     return render(request, 'core/create_group_chat.html', context)
 
 
 def group_chat(request, group_chat_id):
     group_chat_instance = get_object_or_404(GroupChat, id=group_chat_id)
 
-    cur_user_msgs = Message.user_msgs(request.user)
-    interlocutors = []
-    for msg in cur_user_msgs:
-        if msg.sender == request.user:
-            interlocutor = msg.receiver
-        else:
-            interlocutor = msg.sender
-
-        if interlocutor not in interlocutors:
-            interlocutors.append(interlocutor)
-
-    group_chats = request.user.created_group_chats.all()
-
     msg_form = MessageForm(request.POST or None)
     if msg_form.is_valid():
         msg_text = msg_form.cleaned_data['msg_text']
         Message.objects.create(sender=request.user, msg_text=msg_text, group_chat_in=group_chat_instance)
-        return redirect(reverse('group_chat', args=[group_chat_id]))
+        return redirect('group_chat', group_chat_id=group_chat_id)
 
     group_chat_msgs = group_chat_instance.group_msgs.all().order_by('date_sent')
 
+    all_conversations = conversations_list(request.user)
+
     context = {
-        'interlocutors': interlocutors,
-        'group_chats': group_chats,
+        'all_conversations': all_conversations,
         'group_chat_msgs': group_chat_msgs,
         'group_chat_instance': group_chat_instance,
         'group_chat_id': group_chat_id,

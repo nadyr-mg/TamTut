@@ -84,7 +84,8 @@ class Message(models.Model):
 
     @staticmethod
     def user_msgs(user):
-        return Message.objects.filter(Q(sender=user) | Q(receiver=user)).order_by('date_sent')
+        # not fetching group messages
+        return Message.objects.filter(Q(sender=user) | Q(receiver=user), group_chat_in=None).order_by('-date_sent')
 
     def __str__(self):
         return self.msg_text
@@ -95,6 +96,7 @@ class GroupChat(models.Model):
     chat_users = models.ManyToManyField(User, related_name='inside_group_chats')
     chat_title = models.CharField(max_length=30, unique=True)
     image = models.ImageField(default='default.jpg', upload_to='profile_pics')
+    date_created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.chat_title
