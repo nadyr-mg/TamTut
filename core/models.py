@@ -75,13 +75,28 @@ class Post(models.Model):
 
 class Message(models.Model):
     sender = models.ForeignKey(User, related_name="sent_by", on_delete=models.CASCADE)
-    receiver = models.ForeignKey(User, related_name="received_by", on_delete=models.CASCADE)
+    receiver = models.ForeignKey(User, related_name="received_by", default=None, null=True, on_delete=models.CASCADE)
     msg_text = models.TextField(max_length=500, blank=False)
     date_sent = models.DateTimeField(auto_now_add=True)
 
+    group_chat_in = models.ForeignKey('GroupChat', related_name='group_msgs', default=None, null=True,
+                                      on_delete=models.CASCADE)
+
     @staticmethod
     def user_msgs(user):
-        return Message.objects.filter(Q(sender=user) | Q(receiver=user)).order_by('date_sent')
+        # not fetching group messages
+        return Message.objects.filter(Q(sender=user) | Q(receiver=user), group_chat_in=None).order_by('-date_sent')
 
     def __str__(self):
         return self.msg_text
+
+
+class GroupChat(models.Model):
+    author = models.ForeignKey(User, related_name='created_group_chats', on_delete=models.SET_NULL, null=True)
+    chat_users = models.ManyToManyField(User, related_name='inside_group_chats')
+    chat_title = models.CharField(max_length=30, unique=True)
+    image = models.ImageField(default='default.jpg', upload_to='profile_pics')
+    date_created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.chat_title
