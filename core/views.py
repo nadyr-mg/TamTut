@@ -224,8 +224,11 @@ def save_cur_prof_info(target_profile, hobby, image, coors):
         target_profile.image = image
 
     if coors:
-        lat, long = float(coors.split(', ')[0]), float(coors.split(', ')[1])
-        target_profile.latitude, target_profile.longitude = lat, long
+        try:
+            lat, long = float(coors.split(', ')[0]), float(coors.split(', ')[1])
+            target_profile.latitude, target_profile.longitude = lat, long
+        except Exception:
+            pass
 
     target_profile.save()
 
