@@ -6,11 +6,12 @@ services:
     tty: true
     container_name: core_container
     build: .
-    command: bash -c "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: bash -c "python manage.py migrate --noinput && gunicorn TamTut.wsgi:application --bind 0.0.0.0:8000"
     volumes:
       - ./:/src
-    ports:
-      - "8000:8000"
+      - media_volume:/src/media
+    expose:
+      - 8000
     links:
       - db
     depends_on:
@@ -27,3 +28,17 @@ services:
       - POSTGRES_DB=mydb
     volumes:
       - ./database:/var/lib/postgresql/data
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "8000:8000"
+    volumes:
+      - media_volume:/src/media
+    links:
+      - core
+    depends_on:
+      - core
+
+volumes:
+  media_volume:
