@@ -1,0 +1,124 @@
+{% extends 'core/wrapper.html' %}
+
+{% block content %}
+
+    <table style="display: inline-block">
+        <ul>
+            <h2>
+                {% if followed_by|length > 0 %}
+                    {{ prof.user.username }} |
+                    <a href="{% url 'profile_followers' prof.id %}">{{ followed_by|length }} followers</a>
+                {% else %}
+                    {{ prof.user.username }} |
+                    <a>{{ followed_by|length }} followers</a>
+                {% endif %}
+                {% if prof.follows.all|length > 0 %}
+                    <a href="{% url 'profile_following' prof.id %}"> | {{ prof.follows.all|length }} following</a>
+                {% else %}
+                    <a> | {{ prof.follows.all|length }} following</a>
+                {% endif %}
+
+            </h2>
+            <h3>
+                {% if request.user != prof.user %}
+                    <p>
+                        {% if prof in request.user.profile.follows.all %}
+                            <a href="{% url 'follow' prof.pk %}">Unfollow </a>
+                        {% else %}
+                            <a href="{% url 'follow' prof.pk %}">Follow </a>
+                        {% endif %}
+                    </p>
+                {% endif %}
+            </h3>
+
+            <img src="{{ prof.image.url }}">
+
+            <p>Email: {{ prof.user.email }}</p>
+            <p>First name: {{ prof.user.first_name }}</p>
+            <p>Last name: {{ prof.user.last_name }}</p>
+            <h5>Your hobbies:</h5>
+            {% for hobby in hobbies %}
+                <li>{{ hobby }}</li>
+            {% empty %}
+                <p>There are no hobbies yet!</p>
+            {% endfor %}
+            {% if  user.profile.id == prof.id %}
+                <h3><a href="{% url 'edit_profile' %}">Edit Profile</a></h3>
+            {% else %}
+                <p><a href="{% url 'chat_by_user' prof.user.username %}">Message</a></p>
+            {% endif %}
+        </ul>
+        <br>
+        {% if request.user.profile == prof %}
+            <form method="post">
+                {% csrf_token %}
+                <p>
+                    {{ create_post_form }}
+                </p>
+                <button type="submit">Post</button>
+            </form>
+        {% endif %}
+    </table>
+    <table>
+        <tr>
+            {% for post in posts %}
+                <ul>
+                    <p style="text-align:-webkit-right;">{{ post.date_posted }}</p>
+                    <p style="text-align:-webkit-right;">{{ post.text }}</p>
+                    {% if request.user.profile not in post.liked_by.all %}
+                        {% if post.liked_by.all|length > 0 %}
+                            <p style="text-align:-webkit-right;"> {{ post.liked_by.all|length }}
+                                <a href="{{ post.like_post }}">❤
+                                    <i class="fas fa-shopping-cart ml-1"></i>
+                                </a>
+                            </p>
+                        {% else %}
+                            <p style="text-align:-webkit-right;">
+                                <a href="{{ post.like_post }}">❤
+                                    <i class="fas fa-shopping-cart ml-1"></i>
+                                </a>
+                            </p>
+                        {% endif %}
+
+                    {% else %}
+                        {% if post.liked_by.all|length > 0 %}
+                            <p style="text-align:-webkit-right;"> {{ post.liked_by.all|length }}
+                                <a href="{{ post.dislike_post }}">💔
+                                    <i class="fas fa-shopping-cart ml-1"></i>
+                                </a>
+                            </p>
+                        {% else %}
+                            <p style="text-align:-webkit-right;">
+                                <a href="{{ post.dislike_post }}">💔
+                                    <i class="fas fa-shopping-cart ml-1"></i>
+                                </a>
+                            </p>
+                        {% endif %}
+
+                    {% endif %}
+                </ul>
+            {% endfor %}
+        </tr>
+        <div class="pagination" style="text-align:-webkit-right;">
+    <span class="step-links">
+
+    <br>
+        {% if posts.has_previous %}
+            <a href="?page=1">&laquo; first</a>
+            <a href="?page={{ posts.previous_page_number }}">previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ posts.number }} of {{ posts.paginator.num_pages }}.
+        </span>
+
+        {% if posts.has_next %}
+            <a href="?page={{ posts.next_page_number }}">next</a>
+            <a href="?page={{ posts.paginator.num_pages }}">last &raquo;</a>
+        {% endif %}
+    </span>
+        </div>
+    </table>
+
+
+{% endblock content %}

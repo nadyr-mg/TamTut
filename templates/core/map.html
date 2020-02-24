@@ -1,0 +1,58 @@
+{% extends 'core/wrapper.html' %}
+
+
+{% block content %}
+
+
+    <script src="https://maps.api.2gis.ru/2.0/loader.js"></script>
+    <div id="map" style="width: 100%; height: 400px;"></div>
+
+    <div>
+        <h2>
+            Поиск по интересам:
+        </h2>
+        <form method="post">
+            {% csrf_token %}
+            <p>{{ hobbies_form.hobby }}</p>
+            <button type="submit">submit</button>
+        </form>
+    </div>
+
+    <h3>Совпадения по всем интересам:</h3>
+    {% for profile in matched_profiles %}
+        <div><a href="{% url 'profile' profile.id %}">{{ profile.user.username }}</a></div>
+    {% endfor %}
+
+    <script>
+
+
+        DG.then(function () {
+            var map;
+            var myIcon = DG.icon({
+                iconUrl: 'https://images.vexels.com/media/users/3/142675/isolated/preview/84e468a8fff79b66406ef13d3b8653e2-house-location-marker-icon-by-vexels.png',
+                iconRetinaUrl: 'https://images.vexels.com/media/users/3/142675/isolated/preview/84e468a8fff79b66406ef13d3b8653e2-house-location-marker-icon-by-vexels.png',
+                iconSize: [40, 40],
+                iconAnchor: [20, 40],
+            });
+
+            map = DG.map('map', {
+                center: [42.93189, 47.55642],
+                zoom: 12
+            });
+
+
+            {% if request.user.profile.latitude and request.user.profile.longitude %}
+                DG.marker([{{ request.user.profile.latitude }}, {{ request.user.profile.longitude }}], {icon: myIcon}).addTo(map).bindPopup('Я');
+            {% endif %}
+
+            {% for profile in matched_profiles %}
+                {% if profile.latitude and profile.longitude %}
+                    DG.marker([{{ profile.latitude }}, {{ profile.longitude }}]).addTo(map).bindPopup('<a href="{% url 'profile' profile.id %}">{{ profile.user.username }}</a>');
+                {% endif %}
+            {% endfor %}
+
+        });
+
+
+    </script>
+{% endblock content %}

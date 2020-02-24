@@ -1,7 +1,8 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from core.models import Profile
+
+from core.models import Profile, Message, Post, GroupChat
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -14,19 +15,48 @@ class UserRegistrationForm(UserCreationForm):
         fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2',)
 
 
-class EditProfileInfo(forms.ModelForm):
-    class Meta:
-        model = Profile
-        fields = ('image', 'hobby')
+class EditProfileForm(forms.Form):
+    first_name = forms.CharField(max_length=300, required=False, label='Имя')
+    last_name = forms.CharField(max_length=300, required=False, label='Фамилия')
+    email = forms.EmailField(required=False, label='Email')
+    image = forms.ImageField(allow_empty_file=True, required=False)
+    hobby = forms.MultipleChoiceField(choices=[], required=False)
+    coors = forms.CharField(max_length=300, required=False, label='Координаты')
 
-
-class EditUserInfo(forms.ModelForm):
-    class Meta:
-        model = User
-        fields = ('first_name', 'last_name', 'email')
+    def set_hobbies_choices(self, hobbies):
+        self.fields['hobby'].choices = [(hobby, hobby) for hobby in hobbies]
 
 
 class HobbyList(forms.ModelForm):
     class Meta:
         model = Profile
         fields = ('hobby',)
+
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ('msg_text',)
+        labels = {
+            'msg_text': ''
+        }
+        widgets = {
+            'msg_text': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Напишите сообщение...', }),
+        }
+
+
+class CreatePostForm(forms.ModelForm):
+    class Meta:
+        model = Post
+        fields = ('text',)
+        widgets = {
+            'text': forms.Textarea(attrs={'rows': 3}),
+        }
+
+
+class GroupChatForm(forms.ModelForm):
+    class Meta:
+        model = GroupChat
+        fields = (
+            'chat_title', 'chat_users',
+        )

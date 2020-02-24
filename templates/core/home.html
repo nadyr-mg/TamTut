@@ -1,0 +1,61 @@
+{% extends 'core/wrapper.html' %}
+
+
+{% block content %}
+
+    HOME PAGE
+
+    <p>
+        <a href="{% url 'map_page' %}">Map </a>
+
+    </p>
+    <a href="{% url 'home' %}">Followers</a>
+    <a href="{% url 'home' %}?sorting=new">Global</a>
+    {% if is_global_feed is True %}
+        <a href="{% url 'home' %}?sorting=new">New</a>
+        <a href="{% url 'home' %}?sorting=hot">Hot</a>
+        <a href="{% url 'home' %}?sorting=best">Best</a>
+    {% endif %}
+
+
+    {% for post in feed %}
+        <ul>
+            <img src="{{ post.author.image.url }}" alt="Profile image" style="width:40px;height:40px;">
+            <a href="{% url 'profile' post.author.pk %}"
+               style="text-align:justify">{{ post.get_authors_name }} </a>
+            | {{ post.date_posted }} <p style="text-align:justify">{{ post.text }}</p>
+            {% if request.user.profile not in post.liked_by.all %}
+                {% if post.liked_by.all|length > 0 %}
+                    {{ post.liked_by.all|length }}
+                {% endif %}
+                <a href="{{ post.like_post }}" class="btn btn-primary btn-md my-0 p">❤
+                    <i class="fas fa-shopping-cart ml-1"></i>
+                </a>
+            {% else %}
+                {% if post.liked_by.all|length > 0 %}
+                    {{ post.liked_by.all|length }}
+                {% endif %}                <a href="{{ post.dislike_post }}" class="btn btn-primary btn-md my-0 p">💔
+                <i class="fas fa-shopping-cart ml-1"></i>
+            </a>
+            {% endif %}
+        </ul>
+    {% endfor %}
+    {% if feed.has_previous %}
+        {% if feed is not None %}
+            {% if feed.has_previous %}
+                <a href="?page=1">&laquo; first</a>
+                <a href="?page={{ feed.previous_page_number }}">previous</a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ feed.number }} of {{ feed.paginator.num_pages }}.
+            </span>
+
+            {% if feed.has_next %}
+                <a href="?page={{ feed.next_page_number }}">next</a>
+                <a href="?page={{ feed.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
+        {% endif %}
+    {% endif %}
+
+{% endblock content %}
