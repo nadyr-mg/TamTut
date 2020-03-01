@@ -1,5 +1,6 @@
 import os
-import json
+
+from decouple import config
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -7,16 +8,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'ajt!oh%!dcs^c@cmj1$esm_(3omdzd8gau*0r%xb0bx4kg(&n6'
+SECRET_KEY = config('DJANGO_SECRET_KEY')
 
-with open('config.json') as config_file:
-    config = json.load(config_file)
+DEBUG = config('DEBUG', False)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config.get('DEBUG', False)
-
-ALLOWED_HOSTS = '*'
+ALLOWED_HOSTS = config('ALLOWED_HOSTS')
 
 # Application definition
 
@@ -28,10 +24,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # own
     'core.apps.CoreConfig',
-
-    # third party
 ]
 
 MIDDLEWARE = [
@@ -64,17 +57,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'TamTut.wsgi.application'
 
-
-
-db_credentials = config['db_credentials']
 DATABASES = {
     "default": {
       "ENGINE": "django.db.backends.postgresql",
-      "NAME": db_credentials['name'],
-      "USER": db_credentials['user'],
-      "PASSWORD": db_credentials['password'],
-      "HOST": db_credentials['host'],
-      "PORT": db_credentials['port']
+      "NAME": config('NAME'),
+      "USER": config('USER'),
+      "PASSWORD": config('PASSWORD'),
+      "HOST": config('HOST'),
+      "PORT": config('PORT')
     }
 }
 
@@ -117,8 +107,7 @@ STATIC_URL = '/static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-
-POSTS_ON_PROFILE_PAGE = config['POSTS_ON_PROFILE_PAGE']
-POSTS_ON_HOME_PAGE = config['POSTS_ON_HOME_PAGE']
-DAYS_HOT_POSTS = config['DAYS_HOT_POSTS']
-FOLLOWERS_ON_FOLLOWS_PAGE = config['FOLLOWERS_ON_FOLLOWS_PAGE']
+POSTS_ON_PROFILE_PAGE = config('POSTS_ON_PROFILE_PAGE', default=10)
+POSTS_ON_HOME_PAGE = config('POSTS_ON_HOME_PAGE', default=20)
+DAYS_HOT_POSTS = config('DAYS_HOT_POSTS', default=3)
+FOLLOWERS_ON_FOLLOWS_PAGE = config('FOLLOWERS_ON_FOLLOWS_PAGE', default=40)
