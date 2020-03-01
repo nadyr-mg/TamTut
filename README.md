@@ -1,4 +1,4 @@
-## TamTut
+## TamTut (demo)
 
 #### Social network with creative ideas based on similar user interests
 
